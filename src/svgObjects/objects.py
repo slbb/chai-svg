@@ -19,7 +19,7 @@ class Curve(object):
         self.start=start
         self.end=end
     @abc.abstractmethod
-    def isIntersect(self,y:Num)->bool:
+    def isIntersect(self,p:Point)->bool:
         pass
 
 class CurveL(Curve):
@@ -30,14 +30,17 @@ class CurveL(Curve):
         self.c=-self.a*start.x-self.b*start.y
     def __str__(self):
         return 'L{0}{1}'.format(self.start.__str__(),self.end.__str__())
-    def isIntersect(self,y:Num)->bool:
+    def isIntersect(self,p:Point)->bool:
         if self.a==0:
-            return False
+            return false
         elif self.b==0:
-            return self.start.y<y<self.end.y or self.end.y<y<self.end.y
+            if self.start.y<p.y<self.end.y or self.end.y<p.y<self.end.y:
+                return self.start.x<p.x
+            else:
+                return False
         else:
-            x= (-self.c-self.b*y)/self.a
-            return self.start.x<x<self.end.x or self.end.x<x<self.start.x
+            x= (-self.c-self.b*p.y)/self.a
+            return self.start.x<p.x<self.end.x or self.end.x<p.x<self.start.x
 
 class CurveQ(Curve):
     def __init__(self, start:Point, end:Point,control:Point):
@@ -45,7 +48,8 @@ class CurveQ(Curve):
         self.control=control
     def __str__(self):
         return 'Q{0}{1}{2}'.format(self.start.__str__(),self.end.__str__(),self.control.__str__())
-    def isIntersect(self, y:Num)->bool:
+    def isIntersect(self, p:Point)->bool:
+        
         pass
 
 def isPointInsideClosedCurve(p:Point,closedCurve:List[Curve])->bool:
