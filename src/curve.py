@@ -2,6 +2,7 @@ from typing import *
 import abc
 Num = TypeVar('Num', int, float)
 
+
 class Point:
     def __init__(self, x: Num, y: Num) -> None:
         self.x = x
@@ -19,6 +20,9 @@ class Point:
 
 
 class Curve(object):
+    start: Point
+    end: Point
+
     def __init__(self, start: Point, end: Point) -> None:
         self.start = start
         self.end = end
@@ -37,6 +41,9 @@ class Curve(object):
 
 
 class CurveL(Curve):
+    start: Point
+    end: Point
+
     def __init__(self, start: Point, end: Point):
         super().__init__(start, end)
         self.a = start.x-end.x
@@ -62,6 +69,9 @@ class CurveL(Curve):
 
 class CurveQ(Curve):
     """B(t)=(1-t)^2 start + 2t(1-t) control + t^2 end, t in [0,1]"""
+    start: Point
+    end: Point
+    control: Point
 
     def __init__(self, start: Point, end: Point, control: Point):
         super().__init__(start, end)
@@ -98,5 +108,33 @@ class CurveQ(Curve):
         else:
             return False
 
+
 class ClosedCurve(object):
-    pass
+    curves: List[Curve]
+
+    def __init__(self, curves: List[Curve]):
+        super().__init__()
+        if not curves[0].start.isSamePosition(curves[curves.__len__()-1].end):
+            raise('curves are not closed')
+        else:
+            self.curves = curves
+
+    def getPointList(self) -> List[Point]:
+        pl = []
+        for i in range(len(self.curves)):
+            pl.append(self.curves[i].start)
+            pl.append(self.curves[i].end)
+        return pl
+
+    def isPointInside(self, p: Point) -> bool:
+        count = 0
+        for c in self.curves:
+            if c.isIntersect(p):
+                count += 1
+        return count % 2 == 1
+
+    def isClosedCurveInside(self, c:ClosedCurve) -> bool:
+        for p in c.getPointList():
+            if not self.isPointInside(p):
+                return False
+        return True

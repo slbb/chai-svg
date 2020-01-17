@@ -1,31 +1,32 @@
 from typing import *
 from curve import *
-def isPointInsideClosedCurve(p: Point, closedCurve: List[Curve]) -> bool:
-    count = 0
-    for c in closedCurve:
-        if c.isIntersect(p.y):
-            count += 1
-    return count % 2 == 1
 
-def divideClosedCurves(curves: Sequence[Curve]) -> List[List[Curve]]:
+
+def findClosedCurves(curves: Sequence[Curve]) -> List[ClosedCurve]:
     headPoint = None
-    character = []
-    closedCurve = []
+    characterWithClosedCurve: List[ClosedCurve] = []
+    closedCurveList = []
     for c in curves:
         if not headPoint:
             headPoint = c.start
-            closedCurve.append(c)
+            closedCurveList.append(c)
             continue
         if not c.end.isSamePosition(headPoint):
-            closedCurve.append(c)
+            closedCurveList.append(c)
         else:
-            character.append(closedCurve.append(c))
-            closedCurve = []
+            characterWithClosedCurve.append(ClosedCurve(closedCurveList.append(c)))
+            closedCurveList = []
             headPoint = None
-    return character
-
-# TODO: create Tree class
+    return characterWithClosedCurve
 
 
-def generateCharaterClosedCurve(character: Sequence[Sequence[Curve]]) -> List:
-    # TODO: make character into a closedCurve Tree
+def generateCharaterClosedCurve(characterWithClosedCurve: Sequence[ClosedCurve]) -> List:
+    l=len(characterWithClosedCurve)
+    fatherMarkList: Optional[int] = [None]*l
+    for i in range(l):
+        for j in range(i+1,l):
+            if characterWithClosedCurve[j].isClosedCurveInside(characterWithClosedCurve[i]):
+                if not (fatherMarkList[i] and characterWithClosedCurve[j].isClosedCurveInside(characterWithClosedCurve[fatherMarkList[i]])):
+                    fatherMarkList[i]=j
+    for i in fatherMarkList:
+        if 

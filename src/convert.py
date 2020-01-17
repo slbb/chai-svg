@@ -1,7 +1,7 @@
 import re
 from typing import *
 from curve import *
-def pathToCurveList(path: str) -> List[Curve]:
+def pathToCharacterWithCurve(path: str) -> List[Curve]:
     def stringToNum(s: str) -> Num:
         """字符转数字"""
         if '.' in s:
@@ -14,9 +14,9 @@ def pathToCurveList(path: str) -> List[Curve]:
         for item in re.split('[,\s]+|(?<=\d)(?=-)', paramsStr.strip()):
             paramsList.append(stringToNum(item))
         return paramsList
-    headPoint = None
-    nowPoint = Point(0, 0)
-    curves = []
+    headPoint:Optional[Point] = None
+    nowPoint:Point = Point(0, 0)
+    characterWithCurve:List[Curve] = []
     first = re.split('(?<=\d)\s*(?=[A-Za-z])', path.strip())
     for item in first:
         typeName, paramsStr = re.split('(?<=[A-Za-z])', item)
@@ -35,7 +35,7 @@ def pathToCurveList(path: str) -> List[Curve]:
             if end.isSamePosition(headPoint):
                 end = headPoint
                 headPoint = None
-            curves.append(CurveL(nowPoint, end))
+            characterWithCurve.append(CurveL(nowPoint, end))
             nowPoint = end
         elif typeName.lower() == 'h':
             end = Point(paramsList[0], nowPoint.y)
@@ -44,7 +44,7 @@ def pathToCurveList(path: str) -> List[Curve]:
             if end.isSamePosition(headPoint):
                 end = headPoint
                 headPoint = None
-            curves.append(CurveL(nowPoint, end))
+            characterWithCurve.append(CurveL(nowPoint, end))
             nowPoint = end
         elif typeName.lower() == 'v':
             end = Point(nowPoint.x, paramsList[0])
@@ -53,7 +53,7 @@ def pathToCurveList(path: str) -> List[Curve]:
             if end.isSamePosition(headPoint):
                 end = headPoint
                 headPoint = None
-            curves.append(CurveL(nowPoint, end))
+            characterWithCurve.append(CurveL(nowPoint, end))
             nowPoint = end
         elif typeName.lower() == 'q':
             end = Point(paramsList[0], paramsList[1])
@@ -64,7 +64,7 @@ def pathToCurveList(path: str) -> List[Curve]:
             if end.isSamePosition(headPoint):
                 end = headPoint
                 headPoint = None
-            curves.append(CurveQ(nowPoint, end, control))
+            characterWithCurve.append(CurveQ(nowPoint, end, control))
             nowPoint = end
         elif typeName.lower() == 't':
             pass
@@ -76,8 +76,8 @@ def pathToCurveList(path: str) -> List[Curve]:
             pass
         elif typeName.lower() == 'z':
             if headPoint:
-                if not (headPoint.x=nowPoint.x and headPoint.y=nowPoint.y):
-                    curves.append(CurveL(nowPoint, headPoint))
+                if not headPoint.isSamePosition(nowPoint):
+                    characterWithCurve.append(CurveL(nowPoint, headPoint))
                 nowPoint = headPoint
             pass
-    return curves
+    return characterWithCurve

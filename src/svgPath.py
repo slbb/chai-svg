@@ -1,6 +1,7 @@
 import re
 from typing import *
-from svgObjects import *
+from curve import *
+import convert
 
 
 
@@ -9,9 +10,9 @@ s = '<glyph glyph-name="uni4E34" unicode="&#x4E34;" d="M39 55Q39 42 40 24L24 17Q
 name = re.search('glyph-name="(.*)"\s+unicode',s).group(1)
 # print(name)
 
-path = re.search('d="(.*)"\s+horiz',s).group(1)
+path:str = re.search('d="(.*)"\s+horiz',s).group(1)
 print(path)
 
-l:List[Curve]=pathToCurveList(path)
+l:List[Curve]=convert.pathToCharacterWithCurve(path)
 for item in l:
     print(item)

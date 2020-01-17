@@ -1,6 +1,5 @@
 {
     "python.autoComplete.extraPaths": [
-        "D:/Matrix/Coding/git/lanluoxiao.git/Svg/src/"
+        "../src/"
     ],
-    "python.pythonPath": "C:\\Program Files\\Python37\\python.exe",
 }
