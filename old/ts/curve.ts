@@ -12,7 +12,7 @@ export class Point {
     isSamePosition(p: Point): boolean {
         return this.x == p.x && this.y == p.y
     }
-    toString() {
+    toString():string {
         return `(${this.x},${this.y})`
     }
 }
@@ -25,6 +25,7 @@ export abstract class Curve {
         this.end = end
     }
     abstract isIntersect(p: Point): boolean
+    abstract toString():string
 }
 
 export class CurveL extends Curve {
@@ -122,5 +123,12 @@ export class ClosedCurve {
             }
         }
         return true
+    }
+}
+export class SeparatePart{
+    outsideClosedCurve:ClosedCurve
+    insideClosedCurves:Array<ClosedCurve>=[]
+    hasInside():boolean{
+        return typeof(this.insideClosedCurves)=='undefined'||this.insideClosedCurves.length==0
     }
 }
