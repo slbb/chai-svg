@@ -1,16 +1,16 @@
 <template>
   <div id="app">
-    <HelloWorld />
+    <SvgOne/>
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
-import HelloWorld from "./components/HelloWorld.vue";
+import SvgOne from "./components/SvgOne.vue";
 
 @Component({
   components: {
-    HelloWorld
+    SvgOne
   }
 })
 export default class App extends Vue {}

@@ -25,15 +25,18 @@ export class Point {
 }
 
 export abstract class Curve {
+    id: number
     start: Point
     end: Point
     constructor(start: Point, end: Point) {
+        this.id=0
         this.start = start
         this.end = end
     }
     abstract getIntersectPoint(p: Point): Point[]
     abstract toString(): string
-    abstract toPathString(lastEnd: Point): string
+    abstract toPathString(): string
+    abstract toPathStringLinked(lastEnd: Point): string
 }
 
 export class CurveL extends Curve {
@@ -78,7 +81,10 @@ export class CurveL extends Curve {
             return []
         }
     }
-    toPathString(lastEnd: Point): string {
+    toPathString(): string{
+        return `M${this.start.x} ${this.start.y}L${this.end.x} ${this.end.y}`
+    }
+    toPathStringLinked(lastEnd: Point): string {
         let s: string = `L${this.end.x} ${this.end.y}`
         if (lastEnd.isSamePosition(this.start)) {
             return s
@@ -189,9 +195,22 @@ export class CurveQ extends Curve {
             return []
         }
     }
-
-    toPathString(p: Point): string {
-        let s: string = `Q${this.end.x} ${this.end.y} ${this.control.x} ${this.control.y}`
+    getBiggestDistance():number{
+        //t=0.5时，曲线上点p到start和end成的直线距离最远
+        if(this.start.x==this.end.x){
+            let x: number = this.start.x/4 + this.control.x/2 + this.end.x/4
+            return Math.abs(x-this.start.x)
+        }else{
+            let k: number = (this.start.y-this.end.y)/(this.start.x-this.end.x)
+            let b: number = this.start.y-k*this.start.x
+            return Math.abs(k*this.control.x-this.control.y+b)/2/Math.sqrt(Math.pow(k,2)+1)
+        }
+    }
+    toPathString():string{
+        return `M${this.start.x} ${this.start.y}Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
+    }
+    toPathStringLinked(p: Point): string {
+        let s: string = `Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
         if (p.isSamePosition(this.start)) {
             return s
         } else {
@@ -335,8 +354,8 @@ export function pathToCurveList(path: string): Array<Curve> {
                 nowPoint = end
                 break
             case 'q':
-                end = new Point(paramsList[0], paramsList[1])
-                let control: Point = new Point(paramsList[2], paramsList[3])
+                end = new Point(paramsList[2], paramsList[3])
+                let control: Point = new Point(paramsList[0], paramsList[1])
                 if (typeName == 'q') {
                     end.offset(nowPoint.x, nowPoint.y)
                     control.offset(nowPoint.x, nowPoint.y)
@@ -375,7 +394,7 @@ export function curveListToPath(curveList: Array<Curve>): string {
     let path: string = ''
     let lastEnd: Point = new Point(0, 0)
     for (let curve of curveList) {
-        path += curve.toPathString(lastEnd)
+        path += curve.toPathStringLinked(lastEnd)
         lastEnd = curve.end
     }
     path = path.replace(/ -/g, '-')
@@ -465,14 +484,42 @@ export function displayCharacterWithSeparateParts(c: SeparatePart[]): string[] {
     }
     return paths
 }
-
-export function simplifyCurveQ(sp: SeparatePart): void {
-    let curveList: Curve[] = sp.getCurveList()
-    for (let i in curveList) {
-        if (curveList[i] instanceof CurveQ) {
-            let curve: Curve = curveList[i]
-            let yD: number = curve.start.y - curve.end.y
-            let xD: number = curve.start.x - curve.end.x
+export function displayEachCurveOfSeparateParts(c:SeparatePart[]): Array<string[]>{
+    let spPaths: Array<string[]>=[]
+    for(let sp of c){
+        let paths: string[]=[]
+        for(let curve of sp.getCurveList()){
+            paths.push(curve.toPathString())
+        }
+        spPaths.push(paths)
+    }
+    return spPaths
+}
+export function findHV(s:SeparatePart): void{
+    for(let c of s.getCurveList()){
+        if(c instanceof CurveL){
+            if(c.b==0){
+                c.id=1
+            }else{
+                let k_abs: number = Math.abs(c.a/c.b)
+                if(k_abs>40){
+                    c.id=1
+                }else if(k_abs<0.025){
+                    c.id=2
+                }
+            }
+        }else if(c instanceof CurveQ){
+            let b:number=c.start.x-c.end.x
+            if(b==0&&c.getBiggestDistance()<5){
+                c.id=1
+            }else{
+                let k_abs=Math.abs((c.start.y-c.end.y)/b)
+                if(k_abs>20&&c.getBiggestDistance()<7){
+                    c.id=1
+                }else if(k_abs<0.2&&c.getBiggestDistance()<7){
+                    c.id=2
+                }
+            }
         }
     }
 }

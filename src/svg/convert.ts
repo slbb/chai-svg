@@ -67,8 +67,8 @@ export function pathToCurveList(path: string): Array<Curve> {
                 nowPoint = end
                 break
             case 'q':
-                end = new Point(paramsList[0], paramsList[1])
-                let control: Point = new Point(paramsList[2], paramsList[3])
+                end = new Point(paramsList[2], paramsList[3])
+                let control: Point = new Point(paramsList[0], paramsList[1])
                 if (typeName == 'q') {
                     end.offset(nowPoint.x, nowPoint.y)
                     control.offset(nowPoint.x, nowPoint.y)
@@ -107,7 +107,7 @@ export function curveListToPath(curveList: Array<Curve>): string {
     let path: string = ''
     let lastEnd: Point = new Point(0, 0)
     for (let curve of curveList) {
-        path += curve.toPathString(lastEnd)
+        path += curve.toPathStringLinked(lastEnd)
         lastEnd = curve.end
     }
     path = path.replace(/ -/g, '-')

@@ -24,15 +24,18 @@ export class Point {
 }
 
 export abstract class Curve {
+    id: number
     start: Point
     end: Point
     constructor(start: Point, end: Point) {
+        this.id=0
         this.start = start
         this.end = end
     }
     abstract getIntersectPoint(p: Point): Point[]
     abstract toString(): string
-    abstract toPathString(lastEnd: Point): string
+    abstract toPathString(): string
+    abstract toPathStringLinked(lastEnd: Point): string
 }
 
 export class CurveL extends Curve {
@@ -51,9 +54,9 @@ export class CurveL extends Curve {
     getIntersectPoint(p: Point): Point[] {
         if (Math.min(this.start.y, this.end.y) <= p.y && p.y <= Math.max(this.start.y, this.end.y)) {
             if (this.a * p.x + this.b * p.y + this.c == 0) {
-                if (Math.min(this.start.x, this.end.x) <= p.x && p.x <= Math.max(this.start.x, this.end.x)) {
+                if(Math.min(this.start.x, this.end.x) <= p.x && p.x <= Math.max(this.start.x, this.end.x)){
                     return [p]
-                } else {
+                }else{
                     return []
                 }
             } else {
@@ -61,14 +64,14 @@ export class CurveL extends Curve {
                     return []
                 } else {
                     let x: number = (-this.c - this.b * p.y) / this.a
-                    if (x >= p.x) {
+                    if(x>=p.x){
                         return []
                     }
                     let y: number
-                    if (this.b == 0) {
-                        y = p.y
-                    } else {
-                        y = (this.c - this.a * p.x) / this.b
+                    if(this.b==0){
+                        y=p.y
+                    }else{
+                        y=(this.c-this.a*p.x)/this.b
                     }
                     return [new Point(x, y)]
                 }
@@ -77,7 +80,10 @@ export class CurveL extends Curve {
             return []
         }
     }
-    toPathString(lastEnd: Point): string {
+    toPathString(): string{
+        return `M${this.start.x} ${this.start.y}L${this.end.x} ${this.end.y}`
+    }
+    toPathStringLinked(lastEnd: Point): string {
         let s: string = `L${this.end.x} ${this.end.y}`
         if (lastEnd.isSamePosition(this.start)) {
             return s
@@ -188,9 +194,22 @@ export class CurveQ extends Curve {
             return []
         }
     }
-
-    toPathString(p: Point): string {
-        let s: string = `Q${this.end.x} ${this.end.y} ${this.control.x} ${this.control.y}`
+    getBiggestDistance():number{
+        //t=0.5时，曲线上点p到start和end成的直线距离最远
+        if(this.start.x==this.end.x){
+            let x: number = this.start.x/4 + this.control.x/2 + this.end.x/4
+            return Math.abs(x-this.start.x)
+        }else{
+            let k: number = (this.start.y-this.end.y)/(this.start.x-this.end.x)
+            let b: number = this.start.y-k*this.start.x
+            return Math.abs(k*this.control.x-this.control.y+b)/2/Math.sqrt(Math.pow(k,2)+1)
+        }
+    }
+    toPathString():string{
+        return `M${this.start.x} ${this.start.y}Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
+    }
+    toPathStringLinked(p: Point): string {
+        let s: string = `Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
         if (p.isSamePosition(this.start)) {
             return s
         } else {
