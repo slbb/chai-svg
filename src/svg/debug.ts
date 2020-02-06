@@ -29,7 +29,7 @@ export abstract class Curve {
     start: Point
     end: Point
     constructor(start: Point, end: Point) {
-        this.id=0
+        this.id = 0
         this.start = start
         this.end = end
     }
@@ -55,9 +55,9 @@ export class CurveL extends Curve {
     getIntersectPoint(p: Point): Point[] {
         if (Math.min(this.start.y, this.end.y) <= p.y && p.y <= Math.max(this.start.y, this.end.y)) {
             if (this.a * p.x + this.b * p.y + this.c == 0) {
-                if(Math.min(this.start.x, this.end.x) <= p.x && p.x <= Math.max(this.start.x, this.end.x)){
+                if (Math.min(this.start.x, this.end.x) <= p.x && p.x <= Math.max(this.start.x, this.end.x)) {
                     return [p]
-                }else{
+                } else {
                     return []
                 }
             } else {
@@ -65,14 +65,14 @@ export class CurveL extends Curve {
                     return []
                 } else {
                     let x: number = (-this.c - this.b * p.y) / this.a
-                    if(x>=p.x){
+                    if (x >= p.x) {
                         return []
                     }
                     let y: number
-                    if(this.b==0){
-                        y=p.y
-                    }else{
-                        y=(this.c-this.a*p.x)/this.b
+                    if (this.b == 0) {
+                        y = p.y
+                    } else {
+                        y = (this.c - this.a * p.x) / this.b
                     }
                     return [new Point(x, y)]
                 }
@@ -81,7 +81,7 @@ export class CurveL extends Curve {
             return []
         }
     }
-    toPathString(): string{
+    toPathString(): string {
         return `M${this.start.x} ${this.start.y}L${this.end.x} ${this.end.y}`
     }
     toPathStringLinked(lastEnd: Point): string {
@@ -195,18 +195,18 @@ export class CurveQ extends Curve {
             return []
         }
     }
-    getBiggestDistance():number{
+    getBiggestDistance(): number {
         //t=0.5时，曲线上点p到start和end成的直线距离最远
-        if(this.start.x==this.end.x){
-            let x: number = this.start.x/4 + this.control.x/2 + this.end.x/4
-            return Math.abs(x-this.start.x)
-        }else{
-            let k: number = (this.start.y-this.end.y)/(this.start.x-this.end.x)
-            let b: number = this.start.y-k*this.start.x
-            return Math.abs(k*this.control.x-this.control.y+b)/2/Math.sqrt(Math.pow(k,2)+1)
+        if (this.start.x == this.end.x) {
+            let x: number = this.start.x / 4 + this.control.x / 2 + this.end.x / 4
+            return Math.abs(x - this.start.x)
+        } else {
+            let k: number = (this.start.y - this.end.y) / (this.start.x - this.end.x)
+            let b: number = this.start.y - k * this.start.x
+            return Math.abs(k * this.control.x - this.control.y + b) / 2 / Math.sqrt(Math.pow(k, 2) + 1)
         }
     }
-    toPathString():string{
+    toPathString(): string {
         return `M${this.start.x} ${this.start.y}Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
     }
     toPathStringLinked(p: Point): string {
@@ -428,23 +428,23 @@ export function generateCharacterSeparatePart(characterWithClosedCurve: Array<Cl
     let l: number = characterWithClosedCurve.length
     let fatherMarkList: Array<number | undefined> = new Array(l)
     fatherMarkList.fill(undefined)
-    function findFather(i:number,j:number){
+    function findFather(i: number, j: number) {
         if (characterWithClosedCurve[j].isClosedCurveInside(characterWithClosedCurve[i])) {
-            let mark:number|undefined = fatherMarkList[i]
-            if(typeof mark=='undefined'){
-                fatherMarkList[i]=j
-            }else if(typeof mark=='number'){
-                let iFather:ClosedCurve = characterWithClosedCurve[mark]
-                if(!characterWithClosedCurve[j].isClosedCurveInside(iFather)){
-                    fatherMarkList[i]=j
+            let mark: number | undefined = fatherMarkList[i]
+            if (typeof mark == 'undefined') {
+                fatherMarkList[i] = j
+            } else if (typeof mark == 'number') {
+                let iFather: ClosedCurve = characterWithClosedCurve[mark]
+                if (!characterWithClosedCurve[j].isClosedCurveInside(iFather)) {
+                    fatherMarkList[i] = j
                 }
             }
         }
     }
     for (let i = 0; i < l; i++) {
         for (let j = i + 1; j < l; j++) {
-            findFather(i,j)
-            findFather(j,i)
+            findFather(i, j)
+            findFather(j, i)
         }
     }
     let generationList: number[] = fatherMarkList.map(
@@ -484,48 +484,60 @@ export function displayCharacterWithSeparateParts(c: SeparatePart[]): string[] {
     }
     return paths
 }
-export function displayEachCurveOfSeparateParts(c:SeparatePart[]): Array<string[]>{
-    let spPaths: Array<string[]>=[]
-    for(let sp of c){
-        let paths: string[]=[]
-        for(let curve of sp.getCurveList()){
+export function displayEachCurveOfSeparateParts(c: SeparatePart[]): Array<string[]> {
+    let spPaths: Array<string[]> = []
+    for (let sp of c) {
+        let paths: string[] = []
+        for (let curve of sp.getCurveList()) {
             paths.push(curve.toPathString())
         }
         spPaths.push(paths)
     }
     return spPaths
 }
-export function findHV(s:SeparatePart): void{
-    for(let c of s.getCurveList()){
-        if(c instanceof CurveL){
-            if(c.b==0){
-                c.id=1
-            }else{
-                let k_abs: number = Math.abs(c.a/c.b)
-                if(k_abs>40){
-                    c.id=1
-                }else if(k_abs<0.025){
-                    c.id=2
+export function findHV(s: SeparatePart): void {
+    for (let c of s.getCurveList()) {
+        if (c instanceof CurveL) {
+            if (c.b == 0) {
+                c.id = 1
+            } else {
+                let k_abs: number = Math.abs(c.a / c.b)
+                if (k_abs > 40) {
+                    c.id = 1
+                } else if (k_abs < 0.025) {
+                    c.id = 2
                 }
             }
-        }else if(c instanceof CurveQ){
-            let b:number=c.start.x-c.end.x
-            if(b==0&&c.getBiggestDistance()<5){
-                c.id=1
-            }else{
-                let k_abs=Math.abs((c.start.y-c.end.y)/b)
-                if(k_abs>20&&c.getBiggestDistance()<7){
-                    c.id=1
-                }else if(k_abs<0.2&&c.getBiggestDistance()<7){
-                    c.id=2
+        } else if (c instanceof CurveQ) {
+            let b: number = c.start.x - c.end.x
+            if (b == 0 && c.getBiggestDistance() < 5) {
+                c.id = 1
+            } else {
+                let k_abs = Math.abs((c.start.y - c.end.y) / b)
+                if (k_abs > 20 && c.getBiggestDistance() < 7) {
+                    c.id = 1
+                } else if (k_abs < 0.2 && c.getBiggestDistance() < 7) {
+                    c.id = 2
                 }
             }
         }
     }
 }
+
+export function findLine(s: SeparatePart): void {
+    let curveList = s.getCurveList()
+    let unhandledMarkList: boolean[] = new Array(curveList.length)
+    unhandledMarkList.fill(true)
+    for (let index in curveList) {
+        if (unhandledMarkList[index]) {
+            // heng
+
+        }
+    }
+}
 // handle end
 // test
-function testSeparatePart(){
+function testSeparatePart() {
     const s: string = '<glyph glyph-name="uni4E34" unicode="&#x4E34;" d="M39 55Q39 42 40 24L24 17Q25 46 25 100.50Q25 155 24 174L47 164L39 157L39 55M67-26Q68-1 68 16L68 179Q68 193 67 209L92 198L82 191L82 16Q82-2 83-18L67-26M153 190Q143 170 137 159L204 159L217 172L236 153L135 153Q114 115 92 97L89 99Q124 144 140 209L163 195L153 190M145 142Q170 132 181.50 125Q193 118 193 109Q193 106 191 99.50Q189 93 187 93Q184 93 178 103Q169 118 143 139L145 142M225 75Q225 2 226-15L211-22L211 1L126 1L126-18L111-24Q112-8 112 34.50Q112 77 111 94L126 85L209 85L218 95L234 81L225 75M126 79L126 7L161 7L161 79L126 79M175 79L175 7L211 7L211 79L175 79Z"  horiz-adv-x="256" vert-adv-y="256"  />'
     // let nameMatch = s.match(/glyph-name="(.*)"\s+unicode/)
     // let n: string = nameMatch != null ? nameMatch[1] : ''
@@ -539,21 +551,21 @@ function testSeparatePart(){
     console.log(paths);
 }
 testSeparatePart()
-function testOneSep(){
+function testOneSep() {
     const path = "M39 55Q39 42 40 24L24 17Q25 46 25 100.50Q25 155 24 174L47 164L39 157L39 55M67-26Q68-1 68 16L68 179Q68 193 67 209L92 198L82 191L82 16Q82-2 83-18L67-26M153 190Q143 170 137 159L204 159L217 172L236 153L135 153Q114 115 92 97L89 99Q124 144 140 209L163 195L153 190M145 142Q170 132 181.50 125Q193 118 193 109Q193 106 191 99.50Q189 93 187 93Q184 93 178 103Q169 118 143 139L145 142M225 75Q225 2 226-15L211-22L211 1L126 1L126-18L111-24Q112-8 112 34.50Q112 77 111 94L126 85L209 85L218 95L234 81L225 75M126 79L126 7L161 7L161 79L126 79M175 79L175 7L211 7L211 79L175 79Z"
     let ccl = findClosedCurves(pathToCurveList(path))
-    let ccc5=ccl[5]
-    let ccc6=ccl[6]
+    let ccc5 = ccl[5]
+    let ccc6 = ccl[6]
     // console.log(ccc5.getPointList());
     // console.log(ccc6.getPointList());
-    let point=ccc6.getPointList()[3]
+    let point = ccc6.getPointList()[3]
     console.log(point);
     // let curve = ccc5.curves[3]
     // console.log(curve);
     // console.log(curve.getIntersectPoint(point));
-    
+
     console.log(ccc5.isPointInside(point));
-    
+
     // console.log(cc4.isClosedCurveInside(cc5));
 }
 // testOneSep()
@@ -579,7 +591,7 @@ function testPointInsideClosedCurve() {
 
     console.log(cct.isPointInside(tp));
 }
-function testClosedCurveInsideAnother(){
+function testClosedCurveInsideAnother() {
     let p1 = new Point(1, 1)
     let p2 = new Point(0, 2)
     let p3 = new Point(1, 3)
@@ -593,14 +605,14 @@ function testClosedCurveInsideAnother(){
     let q3 = new CurveQ(p5, p7, p6)
     let q4 = new CurveQ(p7, p1, p8)
     let cct = new ClosedCurve([q1, q2, q3, q4])
-    let ap1 = new Point(1.5,1.5)
-    let ap2 = new Point(1.5,2.5)
-    let ap3 = new Point(2.5,2.5)
-    let ap4 = new Point(2.5,1.5)
-    let l1 = new CurveL(ap1,ap2)
-    let l2 = new CurveL(ap2,ap3)
-    let l3 = new CurveL(ap3,ap4)
-    let l4 = new CurveL(ap4,ap1)
-    let cct2 = new ClosedCurve([l1,l2,l3,l4])
+    let ap1 = new Point(1.5, 1.5)
+    let ap2 = new Point(1.5, 2.5)
+    let ap3 = new Point(2.5, 2.5)
+    let ap4 = new Point(2.5, 1.5)
+    let l1 = new CurveL(ap1, ap2)
+    let l2 = new CurveL(ap2, ap3)
+    let l3 = new CurveL(ap3, ap4)
+    let l4 = new CurveL(ap4, ap1)
+    let cct2 = new ClosedCurve([l1, l2, l3, l4])
     console.log(cct.isClosedCurveInside(cct2));
 }

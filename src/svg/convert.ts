@@ -1,4 +1,4 @@
-import { Point, Curve, CurveL, CurveQ } from "./curve"
+import { Point, Curve, CurveL, CurveQ } from "./class"
 
 export function pathToCurveList(path: string): Array<Curve> {
     function paramsStrToParamsList(paramsStr: string): Array<number> {

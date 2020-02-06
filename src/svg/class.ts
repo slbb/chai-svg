@@ -28,7 +28,7 @@ export abstract class Curve {
     start: Point
     end: Point
     constructor(start: Point, end: Point) {
-        this.id=0
+        this.id = 0
         this.start = start
         this.end = end
     }
@@ -54,9 +54,9 @@ export class CurveL extends Curve {
     getIntersectPoint(p: Point): Point[] {
         if (Math.min(this.start.y, this.end.y) <= p.y && p.y <= Math.max(this.start.y, this.end.y)) {
             if (this.a * p.x + this.b * p.y + this.c == 0) {
-                if(Math.min(this.start.x, this.end.x) <= p.x && p.x <= Math.max(this.start.x, this.end.x)){
+                if (Math.min(this.start.x, this.end.x) <= p.x && p.x <= Math.max(this.start.x, this.end.x)) {
                     return [p]
-                }else{
+                } else {
                     return []
                 }
             } else {
@@ -64,14 +64,14 @@ export class CurveL extends Curve {
                     return []
                 } else {
                     let x: number = (-this.c - this.b * p.y) / this.a
-                    if(x>=p.x){
+                    if (x >= p.x) {
                         return []
                     }
                     let y: number
-                    if(this.b==0){
-                        y=p.y
-                    }else{
-                        y=(this.c-this.a*p.x)/this.b
+                    if (this.b == 0) {
+                        y = p.y
+                    } else {
+                        y = (this.c - this.a * p.x) / this.b
                     }
                     return [new Point(x, y)]
                 }
@@ -80,7 +80,7 @@ export class CurveL extends Curve {
             return []
         }
     }
-    toPathString(): string{
+    toPathString(): string {
         return `M${this.start.x} ${this.start.y}L${this.end.x} ${this.end.y}`
     }
     toPathStringLinked(lastEnd: Point): string {
@@ -194,18 +194,32 @@ export class CurveQ extends Curve {
             return []
         }
     }
-    getBiggestDistance():number{
+    getBiggestDistance(): number {
         //t=0.5时，曲线上点p到start和end成的直线距离最远
-        if(this.start.x==this.end.x){
-            let x: number = this.start.x/4 + this.control.x/2 + this.end.x/4
-            return Math.abs(x-this.start.x)
-        }else{
-            let k: number = (this.start.y-this.end.y)/(this.start.x-this.end.x)
-            let b: number = this.start.y-k*this.start.x
-            return Math.abs(k*this.control.x-this.control.y+b)/2/Math.sqrt(Math.pow(k,2)+1)
+        if (this.start.x == this.end.x) {
+            let x: number = this.start.x / 4 + this.control.x / 2 + this.end.x / 4
+            return Math.abs(x - this.start.x)
+        } else {
+            let k: number = (this.start.y - this.end.y) / (this.start.x - this.end.x)
+            let b: number = this.start.y - k * this.start.x
+            return Math.abs(k * this.control.x - this.control.y + b) / 2 / Math.sqrt(Math.pow(k, 2) + 1)
         }
     }
-    toPathString():string{
+    getLength(t: number = 1): number {
+        if(t<0||t>1){
+            throw 'not valid t value'
+        }
+        let ax: number = this.start.x - 2 * this.control.x + this.end.x
+        let bx: number = 2 * (this.control.x - this.start.x)
+        let ay: number = this.start.y - 2 * this.control.y + this.end.y
+        let by: number = 2 * (this.control.y - this.start.y)
+        let a: number = 4 * (ax * ax + ay * ay)
+        let b: number = 4 * (ax * bx + ay * by)
+        let c: number = bx * bx + by * by
+        //别人文章中的公式 注：直线也是一种特殊的贝塞尔曲线，此公式不适用于直线，不然会计算出NaN
+        return (2 * Math.sqrt(a) * (2 * a * t * Math.sqrt(a * t * t + b * t + c) + b * (Math.sqrt(a * t * t + b * t + c) - Math.sqrt(c))) + (b * b - 4 * a * c) * (Math.log(b + 2 * Math.sqrt(a * c)) - Math.log(b + 2 * a * t + 2 * Math.sqrt(a) * Math.sqrt(a * t * t + b * t + c)))) / (8 * Math.pow(a, 3 / 2))
+    }
+    toPathString(): string {
         return `M${this.start.x} ${this.start.y}Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
     }
     toPathStringLinked(p: Point): string {
