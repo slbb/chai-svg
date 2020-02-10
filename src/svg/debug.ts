@@ -1,4 +1,3 @@
-// class
 export class Point {
     x: number
     y: number
@@ -34,6 +33,9 @@ export abstract class Curve {
         this.end = end
     }
     abstract getIntersectPoint(p: Point): Point[]
+    abstract getStartDirection(): number
+    abstract getEndDirection(): number
+    abstract reverse(): Curve
     abstract toString(): string
     abstract toPathString(): string
     abstract toPathStringLinked(lastEnd: Point): string
@@ -80,6 +82,15 @@ export class CurveL extends Curve {
         } else {
             return []
         }
+    }
+    getStartDirection(): number {
+        return Math.atan2(this.start.y - this.end.y, this.start.x - this.end.x)/Math.PI*180
+    }
+    getEndDirection(): number {
+        return Math.atan2(this.end.y - this.start.y, this.end.x - this.start.x)/Math.PI*180
+    }
+    reverse(): CurveL {
+        return new CurveL(this.end,this.start)
     }
     toPathString(): string {
         return `M${this.start.x} ${this.start.y}L${this.end.x} ${this.end.y}`
@@ -206,6 +217,29 @@ export class CurveQ extends Curve {
             return Math.abs(k * this.control.x - this.control.y + b) / 2 / Math.sqrt(Math.pow(k, 2) + 1)
         }
     }
+    getLength(t: number = 1): number {
+        if (t < 0 || t > 1) {
+            throw 'not valid t value'
+        }
+        let ax: number = this.start.x - 2 * this.control.x + this.end.x
+        let bx: number = 2 * (this.control.x - this.start.x)
+        let ay: number = this.start.y - 2 * this.control.y + this.end.y
+        let by: number = 2 * (this.control.y - this.start.y)
+        let a: number = 4 * (ax * ax + ay * ay)
+        let b: number = 4 * (ax * bx + ay * by)
+        let c: number = bx * bx + by * by
+        //别人文章中的公式 注：直线也是一种特殊的贝塞尔曲线，此公式不适用于直线，不然会计算出NaN
+        return (2 * Math.sqrt(a) * (2 * a * t * Math.sqrt(a * t * t + b * t + c) + b * (Math.sqrt(a * t * t + b * t + c) - Math.sqrt(c))) + (b * b - 4 * a * c) * (Math.log(b + 2 * Math.sqrt(a * c)) - Math.log(b + 2 * a * t + 2 * Math.sqrt(a) * Math.sqrt(a * t * t + b * t + c)))) / (8 * Math.pow(a, 3 / 2))
+    }
+    reverse(): CurveQ {
+        return new CurveQ(this.end,this.start,this.control)
+    }
+    getStartDirection(): number {
+        return Math.atan2(this.start.y - this.control.y, this.start.x - this.control.x)/Math.PI*180
+    }
+    getEndDirection(): number {
+        return Math.atan2(this.end.y - this.control.y, this.end.x - this.control.x)/Math.PI*180
+    }
     toPathString(): string {
         return `M${this.start.x} ${this.start.y}Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
     }
@@ -276,18 +310,44 @@ export class SeparatePart {
         let curveList: Curve[] = this.outsideClosedCurve.curves
         if (this.hasInside()) {
             for (let closedCurve of this.insideClosedCurves) {
-                for (let curve of closedCurve.curves) {
-                    curveList.push(curve)
-                }
+                curveList.concat(closedCurve.curves)
             }
         }
         return curveList
     }
 }
-// class end
-
-// convert
-export function pathToCurveList(path: string): Array<Curve> {
+export class Line {
+    curves: Curve[]
+    constructor(curve: Curve) {
+        this.curves = new Array()
+        this.curves.push(curve)
+    }
+    getCurves(): Curve[] {
+        return this.curves
+    }
+    addCurveToEnd(curve: Curve): void {
+        this.curves.push(curve)
+    }
+    addCurveToHead(curve: Curve): void {
+        let tmp: Curve[] = []
+        tmp.push(curve)
+        this.curves = tmp.concat(this.curves)
+    }
+    getEndCurve(): Curve {
+        return this.curves[this.curves.length - 1]
+    }
+    getHeadCurve(): Curve {
+        return this.curves[0]
+    }
+    setId(id: number): void {
+        for (let c of this.curves) {
+            c.id == id
+        }
+    }
+    getId(): number {
+        return this.curves[0].id
+    }
+}export function pathToCurveList(path: string): Array<Curve> {
     function paramsStrToParamsList(paramsStr: string): Array<number> {
         let paramsList: Array<number> = []
         for (let i of paramsStr.trim().split(/[,\s]+|(?<=\d)(?=-)/)) {
@@ -400,10 +460,7 @@ export function curveListToPath(curveList: Array<Curve>): string {
     path = path.replace(/ -/g, '-')
     path += 'Z'
     return path
-}
-// convert end
-// handle
-export function findClosedCurves(curves: Array<Curve>): Array<ClosedCurve> {
+}export function findClosedCurves(curves: Array<Curve>): Array<ClosedCurve> {
     let headPoint: Point | null = null
     let characterWithClosedCurve: Array<ClosedCurve> = []
     let closedCurveList: Array<Curve> = []
@@ -524,95 +581,78 @@ export function findHV(s: SeparatePart): void {
     }
 }
 
-export function findLine(s: SeparatePart): void {
-    let curveList = s.getCurveList()
-    let unhandledMarkList: boolean[] = new Array(curveList.length)
+export function findLine(curves:Curve[]): Line[] {
+    function calcTurnAngle(startAngle: number, endAngle: number):number {
+        return (endAngle - startAngle + 360) % 360
+    }
+    function calcDistance(p1:Point,p2:Point):number{
+        return Math.sqrt(Math.pow(p1.x-p2.x,2)+Math.pow(p1.y-p2.y,2))
+    }
+    function judgeConsequent(cp: Point, ca: number, lp: Point, la: number): boolean {
+        let distance: number = calcDistance(cp,lp)
+        let lp_cpAngle: number = Math.atan2(cp.y - lp.y, cp.x - lp.x)
+        let l2cTurn: number = calcTurnAngle(la, (ca - 180) % 360)
+        let l2lp_cpTurn: number = calcTurnAngle(la, lp_cpAngle)
+        return distance < 20 && l2cTurn * l2lp_cpTurn >= 0 && Math.abs(l2lp_cpTurn) <= Math.abs(l2cTurn)
+    }
+    let result: Line[] = []
+    let unhandledMarkList: boolean[] = new Array(curves.length)
     unhandledMarkList.fill(true)
-    for (let index in curveList) {
-        if (unhandledMarkList[index]) {
-            // heng
-
+    for (let index in curves) {
+        let curve: Curve = curves[index]
+        let selfTurn: number = calcTurnAngle(curve.getEndDirection(), (curve.getStartDirection() - 180) % 360)
+        if (Math.abs(selfTurn) > 70) {
+            result.push(new Line(curve))
+            unhandledMarkList[index] = false
         }
     }
-}
-// handle end
-// test
-function testSeparatePart() {
-    const s: string = '<glyph glyph-name="uni4E34" unicode="&#x4E34;" d="M39 55Q39 42 40 24L24 17Q25 46 25 100.50Q25 155 24 174L47 164L39 157L39 55M67-26Q68-1 68 16L68 179Q68 193 67 209L92 198L82 191L82 16Q82-2 83-18L67-26M153 190Q143 170 137 159L204 159L217 172L236 153L135 153Q114 115 92 97L89 99Q124 144 140 209L163 195L153 190M145 142Q170 132 181.50 125Q193 118 193 109Q193 106 191 99.50Q189 93 187 93Q184 93 178 103Q169 118 143 139L145 142M225 75Q225 2 226-15L211-22L211 1L126 1L126-18L111-24Q112-8 112 34.50Q112 77 111 94L126 85L209 85L218 95L234 81L225 75M126 79L126 7L161 7L161 79L126 79M175 79L175 7L211 7L211 79L175 79Z"  horiz-adv-x="256" vert-adv-y="256"  />'
-    // let nameMatch = s.match(/glyph-name="(.*)"\s+unicode/)
-    // let n: string = nameMatch != null ? nameMatch[1] : ''
-    // console.log(n)
-    let pathMatch = s.match(/d="(.*)"\s+horiz/)
-    let path: string = pathMatch != null ? pathMatch[1] : ''
-    // console.log(path)
-    // let l: Array<Curve> = pathToCurveList(path)
-    let sp = generateCharacterSeparatePart(findClosedCurves(pathToCurveList(path)))
-    let paths: string[] = displayCharacterWithSeparateParts(sp)
-    console.log(paths);
-}
-testSeparatePart()
-function testOneSep() {
-    const path = "M39 55Q39 42 40 24L24 17Q25 46 25 100.50Q25 155 24 174L47 164L39 157L39 55M67-26Q68-1 68 16L68 179Q68 193 67 209L92 198L82 191L82 16Q82-2 83-18L67-26M153 190Q143 170 137 159L204 159L217 172L236 153L135 153Q114 115 92 97L89 99Q124 144 140 209L163 195L153 190M145 142Q170 132 181.50 125Q193 118 193 109Q193 106 191 99.50Q189 93 187 93Q184 93 178 103Q169 118 143 139L145 142M225 75Q225 2 226-15L211-22L211 1L126 1L126-18L111-24Q112-8 112 34.50Q112 77 111 94L126 85L209 85L218 95L234 81L225 75M126 79L126 7L161 7L161 79L126 79M175 79L175 7L211 7L211 79L175 79Z"
-    let ccl = findClosedCurves(pathToCurveList(path))
-    let ccc5 = ccl[5]
-    let ccc6 = ccl[6]
-    // console.log(ccc5.getPointList());
-    // console.log(ccc6.getPointList());
-    let point = ccc6.getPointList()[3]
-    console.log(point);
-    // let curve = ccc5.curves[3]
-    // console.log(curve);
-    // console.log(curve.getIntersectPoint(point));
-
-    console.log(ccc5.isPointInside(point));
-
-    // console.log(cc4.isClosedCurveInside(cc5));
-}
-// testOneSep()
-function testPointInsideClosedCurve() {
-    let p1 = new Point(1, 1)
-    let p2 = new Point(0, 2)
-    let p3 = new Point(1, 3)
-    let p4 = new Point(2, 4)
-    let p5 = new Point(3, 3)
-    let p6 = new Point(4, 2)
-    let p7 = new Point(3, 1)
-    let p8 = new Point(2, 0)
-    let q1 = new CurveQ(p1, p3, p2)
-    let q2 = new CurveQ(p3, p5, p4)
-    let q3 = new CurveQ(p5, p7, p6)
-    let q4 = new CurveQ(p7, p1, p8)
-    let cct = new ClosedCurve([q1, q2, q3, q4])
-    let tp = new Point(2, 1.5)
-    console.log(q1.getIntersectPoint(tp));
-    console.log(q2.getIntersectPoint(tp));
-    console.log(q3.getIntersectPoint(tp));
-    console.log(q4.getIntersectPoint(tp));
-
-    console.log(cct.isPointInside(tp));
-}
-function testClosedCurveInsideAnother() {
-    let p1 = new Point(1, 1)
-    let p2 = new Point(0, 2)
-    let p3 = new Point(1, 3)
-    let p4 = new Point(2, 4)
-    let p5 = new Point(3, 3)
-    let p6 = new Point(4, 2)
-    let p7 = new Point(3, 1)
-    let p8 = new Point(2, 0)
-    let q1 = new CurveQ(p1, p3, p2)
-    let q2 = new CurveQ(p3, p5, p4)
-    let q3 = new CurveQ(p5, p7, p6)
-    let q4 = new CurveQ(p7, p1, p8)
-    let cct = new ClosedCurve([q1, q2, q3, q4])
-    let ap1 = new Point(1.5, 1.5)
-    let ap2 = new Point(1.5, 2.5)
-    let ap3 = new Point(2.5, 2.5)
-    let ap4 = new Point(2.5, 1.5)
-    let l1 = new CurveL(ap1, ap2)
-    let l2 = new CurveL(ap2, ap3)
-    let l3 = new CurveL(ap3, ap4)
-    let l4 = new CurveL(ap4, ap1)
-    let cct2 = new ClosedCurve([l1, l2, l3, l4])
-    console.log(cct.isClosedCurveInside(cct2));
+    for (let index = 0; index < curves.length; index++) {
+        if (unhandledMarkList[index]) {
+            let l: Line = new Line(curves[index])
+            for (let i = index + 1; i < curves.length; i++) {
+                if (unhandledMarkList[i]) {
+                    let curve: Curve = curves[i]
+                    let lHeadCurve: Curve = l.getHeadCurve()
+                    let lEndCurve: Curve = l.getEndCurve()
+                    let cStart_lEnd:number = calcDistance(curve.start,lEndCurve.end)
+                    let cEnd_lEnd:number = calcDistance(curve.end,lEndCurve.end)
+                    let cStart_lStart:number = calcDistance(curve.start,lHeadCurve.start)
+                    let cEnd_lStart:number = calcDistance(curve.end,lHeadCurve.start)
+                    let minD:number = Math.min(cStart_lEnd,cEnd_lEnd,cStart_lStart,cEnd_lStart)
+                    switch(minD){
+                        case cStart_lEnd:
+                            if(judgeConsequent(curve.start,curve.getStartDirection(),lEndCurve.end,lEndCurve.getEndDirection())){
+                                l.addCurveToEnd(curve)
+                                unhandledMarkList[i]=false
+                            }
+                            break
+                        case cEnd_lEnd:
+                            if(judgeConsequent(curve.end,curve.getEndDirection(),lEndCurve.end,lEndCurve.getEndDirection())){
+                                l.addCurveToEnd(curve.reverse())
+                                unhandledMarkList[i]=false
+                            }
+                            break
+                        case cStart_lStart:
+                            if(judgeConsequent(curve.start,curve.getStartDirection(),lHeadCurve.start,lHeadCurve.getStartDirection())){
+                                l.addCurveToHead(curve.reverse())
+                                unhandledMarkList[i]=false
+                            }
+                            break
+                        case cEnd_lStart:
+                            if(judgeConsequent(curve.end,curve.getEndDirection(),lHeadCurve.start,lHeadCurve.getStartDirection())){
+                                l.addCurveToHead(curve)
+                                unhandledMarkList[i]=false
+                            }
+                            break
+                    }
+                }
+            }
+            result.push(l)
+            unhandledMarkList[index] = false
+        }
+    }
+    for(let i=0;i<result.length;i++){
+        result[i].setId(i%3+1)
+    }
+    return result
 }

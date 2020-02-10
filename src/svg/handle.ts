@@ -1,6 +1,6 @@
-import { ClosedCurve, Curve, Point, SeparatePart, CurveQ, CurveL } from "./class";
+import { ClosedCurve, Curve, Point, SeparatePart, CurveQ, CurveL, Line } from "./class";
 import { curveListToPath } from './convert';
-
+//start
 export function findClosedCurves(curves: Array<Curve>): Array<ClosedCurve> {
     let headPoint: Point | null = null
     let characterWithClosedCurve: Array<ClosedCurve> = []
@@ -122,14 +122,78 @@ export function findHV(s: SeparatePart): void {
     }
 }
 
-export function findLine(s: SeparatePart): void {
-    let curveList = s.getCurveList()
-    let unhandledMarkList: boolean[] = new Array(curveList.length)
+export function findLine(curves:Curve[]): Line[] {
+    function calcTurnAngle(startAngle: number, endAngle: number):number {
+        return (endAngle - startAngle + 360) % 360
+    }
+    function calcDistance(p1:Point,p2:Point):number{
+        return Math.sqrt(Math.pow(p1.x-p2.x,2)+Math.pow(p1.y-p2.y,2))
+    }
+    function judgeConsequent(cp: Point, ca: number, lp: Point, la: number): boolean {
+        let distance: number = calcDistance(cp,lp)
+        let lp_cpAngle: number = Math.atan2(cp.y - lp.y, cp.x - lp.x)
+        let l2cTurn: number = calcTurnAngle(la, (ca - 180) % 360)
+        let l2lp_cpTurn: number = calcTurnAngle(la, lp_cpAngle)
+        return distance < 20 && l2cTurn * l2lp_cpTurn >= 0 && Math.abs(l2lp_cpTurn) <= Math.abs(l2cTurn)
+    }
+    let result: Line[] = []
+    let unhandledMarkList: boolean[] = new Array(curves.length)
     unhandledMarkList.fill(true)
-    for (let index in curveList) {
-        if (unhandledMarkList[index]) {
-            // heng
-
+    for (let index in curves) {
+        let curve: Curve = curves[index]
+        let selfTurn: number = calcTurnAngle(curve.getEndDirection(), (curve.getStartDirection() - 180) % 360)
+        if (Math.abs(selfTurn) > 70) {
+            result.push(new Line(curve))
+            unhandledMarkList[index] = false
         }
     }
+    for (let index = 0; index < curves.length; index++) {
+        if (unhandledMarkList[index]) {
+            let l: Line = new Line(curves[index])
+            for (let i = index + 1; i < curves.length; i++) {
+                if (unhandledMarkList[i]) {
+                    let curve: Curve = curves[i]
+                    let lHeadCurve: Curve = l.getHeadCurve()
+                    let lEndCurve: Curve = l.getEndCurve()
+                    let cStart_lEnd:number = calcDistance(curve.start,lEndCurve.end)
+                    let cEnd_lEnd:number = calcDistance(curve.end,lEndCurve.end)
+                    let cStart_lStart:number = calcDistance(curve.start,lHeadCurve.start)
+                    let cEnd_lStart:number = calcDistance(curve.end,lHeadCurve.start)
+                    let minD:number = Math.min(cStart_lEnd,cEnd_lEnd,cStart_lStart,cEnd_lStart)
+                    switch(minD){
+                        case cStart_lEnd:
+                            if(judgeConsequent(curve.start,curve.getStartDirection(),lEndCurve.end,lEndCurve.getEndDirection())){
+                                l.addCurveToEnd(curve)
+                                unhandledMarkList[i]=false
+                            }
+                            break
+                        case cEnd_lEnd:
+                            if(judgeConsequent(curve.end,curve.getEndDirection(),lEndCurve.end,lEndCurve.getEndDirection())){
+                                l.addCurveToEnd(curve.reverse())
+                                unhandledMarkList[i]=false
+                            }
+                            break
+                        case cStart_lStart:
+                            if(judgeConsequent(curve.start,curve.getStartDirection(),lHeadCurve.start,lHeadCurve.getStartDirection())){
+                                l.addCurveToHead(curve.reverse())
+                                unhandledMarkList[i]=false
+                            }
+                            break
+                        case cEnd_lStart:
+                            if(judgeConsequent(curve.end,curve.getEndDirection(),lHeadCurve.start,lHeadCurve.getStartDirection())){
+                                l.addCurveToHead(curve)
+                                unhandledMarkList[i]=false
+                            }
+                            break
+                    }
+                }
+            }
+            result.push(l)
+            unhandledMarkList[index] = false
+        }
+    }
+    for(let i=0;i<result.length;i++){
+        result[i].setId(i%3+1)
+    }
+    return result
 }

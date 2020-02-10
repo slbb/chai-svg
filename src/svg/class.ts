@@ -1,3 +1,4 @@
+//start
 export class Point {
     x: number
     y: number
@@ -33,6 +34,9 @@ export abstract class Curve {
         this.end = end
     }
     abstract getIntersectPoint(p: Point): Point[]
+    abstract getStartDirection(): number
+    abstract getEndDirection(): number
+    abstract reverse(): Curve
     abstract toString(): string
     abstract toPathString(): string
     abstract toPathStringLinked(lastEnd: Point): string
@@ -79,6 +83,15 @@ export class CurveL extends Curve {
         } else {
             return []
         }
+    }
+    getStartDirection(): number {
+        return Math.atan2(this.start.y - this.end.y, this.start.x - this.end.x)/Math.PI*180
+    }
+    getEndDirection(): number {
+        return Math.atan2(this.end.y - this.start.y, this.end.x - this.start.x)/Math.PI*180
+    }
+    reverse(): CurveL {
+        return new CurveL(this.end,this.start)
     }
     toPathString(): string {
         return `M${this.start.x} ${this.start.y}L${this.end.x} ${this.end.y}`
@@ -206,7 +219,7 @@ export class CurveQ extends Curve {
         }
     }
     getLength(t: number = 1): number {
-        if(t<0||t>1){
+        if (t < 0 || t > 1) {
             throw 'not valid t value'
         }
         let ax: number = this.start.x - 2 * this.control.x + this.end.x
@@ -218,6 +231,15 @@ export class CurveQ extends Curve {
         let c: number = bx * bx + by * by
         //别人文章中的公式 注：直线也是一种特殊的贝塞尔曲线，此公式不适用于直线，不然会计算出NaN
         return (2 * Math.sqrt(a) * (2 * a * t * Math.sqrt(a * t * t + b * t + c) + b * (Math.sqrt(a * t * t + b * t + c) - Math.sqrt(c))) + (b * b - 4 * a * c) * (Math.log(b + 2 * Math.sqrt(a * c)) - Math.log(b + 2 * a * t + 2 * Math.sqrt(a) * Math.sqrt(a * t * t + b * t + c)))) / (8 * Math.pow(a, 3 / 2))
+    }
+    reverse(): CurveQ {
+        return new CurveQ(this.end,this.start,this.control)
+    }
+    getStartDirection(): number {
+        return Math.atan2(this.start.y - this.control.y, this.start.x - this.control.x)/Math.PI*180
+    }
+    getEndDirection(): number {
+        return Math.atan2(this.end.y - this.control.y, this.end.x - this.control.x)/Math.PI*180
     }
     toPathString(): string {
         return `M${this.start.x} ${this.start.y}Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
@@ -289,11 +311,41 @@ export class SeparatePart {
         let curveList: Curve[] = this.outsideClosedCurve.curves
         if (this.hasInside()) {
             for (let closedCurve of this.insideClosedCurves) {
-                for (let curve of closedCurve.curves) {
-                    curveList.push(curve)
-                }
+                curveList.concat(closedCurve.curves)
             }
         }
         return curveList
+    }
+}
+export class Line {
+    curves: Curve[]
+    constructor(curve: Curve) {
+        this.curves = new Array()
+        this.curves.push(curve)
+    }
+    getCurves(): Curve[] {
+        return this.curves
+    }
+    addCurveToEnd(curve: Curve): void {
+        this.curves.push(curve)
+    }
+    addCurveToHead(curve: Curve): void {
+        let tmp: Curve[] = []
+        tmp.push(curve)
+        this.curves = tmp.concat(this.curves)
+    }
+    getEndCurve(): Curve {
+        return this.curves[this.curves.length - 1]
+    }
+    getHeadCurve(): Curve {
+        return this.curves[0]
+    }
+    setId(id: number): void {
+        for (let c of this.curves) {
+            c.id == id
+        }
+    }
+    getId(): number {
+        return this.curves[0].id
     }
 }

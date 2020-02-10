@@ -12,7 +12,8 @@ import {
   findClosedCurves,
   generateCharacterSeparatePart,
   displayCharacterWithSeparateParts,
-  findHV
+  findHV,
+  findLine
 } from "../svg/handle";
 import { Point } from "../svg/class";
 import { PathElementFactory, PathElement } from "../svg/svgDisplayObject";
@@ -38,13 +39,15 @@ export default class SvgOne extends Vue {
       findClosedCurves(pathToCurveList(this.char))
     );
     for (let s of sp) {
-      findHV(s);
+      let lines = findLine(s.getCurveList())
       let svg: { paths: PathElement[] } = { paths: [] };
-      for (let curve of s.getCurveList()) {
-        let path: PathElement = this.factory.createPathElement(curve);
-        svg.paths.push(path);
+      for(let line of lines){
+        for (let curve of line.getCurves()) {
+          let path: PathElement = this.factory.createPathElement(curve);
+          svg.paths.push(path);
+        }
+        this.svgs.push(svg);
       }
-      this.svgs.push(svg);
     }
   }
 }

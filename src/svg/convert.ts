@@ -1,5 +1,5 @@
 import { Point, Curve, CurveL, CurveQ } from "./class"
-
+//start
 export function pathToCurveList(path: string): Array<Curve> {
     function paramsStrToParamsList(paramsStr: string): Array<number> {
         let paramsList: Array<number> = []
