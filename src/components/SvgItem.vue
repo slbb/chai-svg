@@ -1,13 +1,11 @@
 <template>
   <div>
-    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewbox="0 0 256 256">
+    <svg xmlns="http://www.w3.org/2000/svg" version="1.1">
       <path
         v-for="(path, index) in paths"
-        :key="index"
         transform="matrix(1 0 0 -1 0 220)"
-        fill="none"
-        :stroke="path.stroke"
-        stroke-width="2"
+        :key="index"
+        :stroke="path.stroke?path.stroke:'black'"
         :d="path.d"
       />
     </svg>
@@ -19,7 +17,7 @@ import { Component, Prop, Vue } from "vue-property-decorator";
 @Component
 export default class SvgItem extends Vue {
   @Prop()
-  paths!: object[];
+  paths!:{d:string,stroke?:string}
 }
 </script>
 
@@ -30,5 +28,9 @@ svg {
   height: 256px;
   float: left;
   border: 1px solid black;
+}
+path {
+  fill: none;
+  stroke-width: 2;
 }
 </style>

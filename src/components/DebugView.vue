@@ -1,53 +1,49 @@
 <template>
   <div>
-    <SvgItem v-for="(svg, index) in svgs" :key="index" :paths="svg.paths" />
+    <SvgItem v-for="(svg, index) in svgs" :key="index" :paths="svg" />
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Prop, Vue } from "vue-property-decorator";
 import SvgItem from "./SvgItem.vue";
-import { pathToCurveList, curveListToPath } from "../svg/convert";
+import { pathToCurveList } from "../svg/convert";
 import {
   findClosedCurves,
-  generateCharacterSeparatePart,
-  displayCharacterWithSeparateParts,
-  findHV,
-  findLine
+  generateSeparatePart,
+  findLines
 } from "../svg/handle";
-import { Point } from "../svg/class";
-import { PathElementFactory, PathElement } from "../svg/svgDisplayObject";
+import { Line } from "../svg/class";
+import { PathElement, SvgUtil } from "../svg/svgDisplay";
 
 @Component({
   components: {
     SvgItem
   }
 })
-export default class SvgOne extends Vue {
+export default class DebugView extends Vue {
   // char: string =
   //   "M39 55Q39 42 40 24L24 17Q25 46 25 100.50Q25 155 24 174L47 164L39 157L39 55M67-26Q68-1 68 16L68 179Q68 193 67 209L92 198L82 191L82 16Q82-2 83-18L67-26M153 190Q143 170 137 159L204 159L217 172L236 153L135 153Q114 115 92 97L89 99Q124 144 140 209L163 195L153 190M145 142Q170 132 181.50 125Q193 118 193 109Q193 106 191 99.50Q189 93 187 93Q184 93 178 103Q169 118 143 139L145 142M225 75Q225 2 226-15L211-22L211 1L126 1L126-18L111-24Q112-8 112 34.50Q112 77 111 94L126 85L209 85L218 95L234 81L225 75M126 79L126 7L161 7L161 79L126 79M175 79L175 7L211 7L211 79L175 79Z";
   // char: string =
   //   "M53 206L55 209Q77 198 79 191Q81 184 77 179.50Q73 175 72 175Q69 175 68 181Q65 191 53 206M19 172L97 172L108 183L124 166L94 166L108 158Q97 151 80 124L104 124L115 135L131 118L45 118Q32 118 21 115L12 124L75 124Q85 147 90 166L52 166Q39 166 28 163L19 172M36 160L38 163Q60 151 61.50 147Q63 143 63 141Q63 136 60 132.50Q57 129 55 129Q52 129 51 135Q48 145 36 160M35-24Q36-12 36 41Q36 94 35 109L50 101L94 101L102 109L115 97L108 92L108-3Q107-19 90-24Q89-14 70-7L70-3Q83-5 89.50-5.50Q96-6 95 5L95 36L49 36L49-18L35-24M49 95L49 72L95 72L95 95L49 95M215 140Q215 116 216 107L202 102L202 109L151 109L151 85L191 85L201 94L215 79L151 79L151 58L190 58L200 67L214 52L151 52L151 30L191 30L201 39L215 24L151 24L151 4Q151-10 169-10L211-10Q220-9 221.50-0.50Q223 8 224 36L229 36Q229 12 231 5.50Q233-1 241-7Q234-16 228-18.50Q222-21 211-21L161-21Q138-21 138 0Q138 109 137 124L152 115L202 115L202 143L155 143L147 135L133 147L140 153Q140 196 139 208L163 199L153 193L153 178L199 178L210 189L226 172L153 172L153 149L199 149L207 158L223 145L215 140M49 66L49 42L95 42L95 66L49 66Z";
-  char: string = 
-        "M113 206Q127 197 133.50 189.50Q140 182 140 177Q140 172 136 166.50Q132 161 129 161Q126 161 124 171Q121 187 110 204L113 206M18 155L204 155L220 171L242 149L180 149Q167 84 136 41Q176 5 241 0L241-4Q222-7 219-19Q158-1 127 33Q80-10 13-23L12-20Q77-1 119 42Q90 85 78 149L51 149Q38 149 27 146L18 155M84 149Q98 91 127 52Q153 91 164 149L84 149Z"
-  svgs: Array<{ paths: PathElement[] }> = [
-    { paths: [new PathElement(this.char, "black")] }
-  ];
-  factory: PathElementFactory = new PathElementFactory();
+  char: string =
+    "M113 206Q127 197 133.50 189.50Q140 182 140 177Q140 172 136 166.50Q132 161 129 161Q126 161 124 171Q121 187 110 204L113 206M18 155L204 155L220 171L242 149L180 149Q167 84 136 41Q176 5 241 0L241-4Q222-7 219-19Q158-1 127 33Q80-10 13-23L12-20Q77-1 119 42Q90 85 78 149L51 149Q38 149 27 146L18 155M84 149Q98 91 127 52Q153 91 164 149L84 149Z";
+  svgs: Array<PathElement[]> = [[{ d: this.char, stroke: "black" }]];
   created() {
-    let sp = generateCharacterSeparatePart(
+    let sps = generateSeparatePart(
       findClosedCurves(pathToCurveList(this.char))
     );
-    for (let s of sp) {
-      let lines = findLine(s.getCurveList())
-      let svg: { paths: PathElement[] } = { paths: [] };
-      for(let line of lines){
-        for (let curve of line.getCurves()) {
-          let path: PathElement = this.factory.createPathElement(curve);
-          svg.paths.push(path);
-        }
-        this.svgs.push(svg);
-      }
+    let svg: PathElement[] = [];
+    for (let sp of sps) {
+      svg = SvgUtil.array2pathElementsColored(findLines(sp.getCurveList()), {
+        0: "yellow",
+        1: "red",
+        2: "blue",
+        3: "green",
+        4: "orange",
+        5: "pink"
+      });
+      this.svgs.push(svg)
     }
   }
 }

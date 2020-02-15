@@ -1,4 +1,4 @@
-import { generateCharacterSeparatePart, findClosedCurves, displayCharacterWithSeparateParts } from "./handle"
+import { generateCharacterSeparatePart, findClosedCurves, findLines } from "./handle"
 import { pathToCurveList } from './convert'
 import { Point, CurveQ, ClosedCurve, CurveL } from './class'
 
@@ -13,8 +13,6 @@ function testSeparatePart() {
     // console.log(path)
     // let l: Array<Curve> = pathToCurveList(path)
     let sp = generateCharacterSeparatePart(findClosedCurves(pathToCurveList(path)))
-    let paths: string[] = displayCharacterWithSeparateParts(sp)
-    console.log(paths);
 }
 function testOneSep() {
     const path = "M39 55Q39 42 40 24L24 17Q25 46 25 100.50Q25 155 24 174L47 164L39 157L39 55M67-26Q68-1 68 16L68 179Q68 193 67 209L92 198L82 191L82 16Q82-2 83-18L67-26M153 190Q143 170 137 159L204 159L217 172L236 153L135 153Q114 115 92 97L89 99Q124 144 140 209L163 195L153 190M145 142Q170 132 181.50 125Q193 118 193 109Q193 106 191 99.50Q189 93 187 93Q184 93 178 103Q169 118 143 139L145 142M225 75Q225 2 226-15L211-22L211 1L126 1L126-18L111-24Q112-8 112 34.50Q112 77 111 94L126 85L209 85L218 95L234 81L225 75M126 79L126 7L161 7L161 79L126 79M175 79L175 7L211 7L211 79L175 79Z"
@@ -80,4 +78,19 @@ function testClosedCurveInsideAnother() {
     let l4 = new CurveL(ap4, ap1)
     let cct2 = new ClosedCurve([l1, l2, l3, l4])
     console.log(cct.isClosedCurveInside(cct2));
+}
+function testFindLines() {
+    let c1 = new CurveL(new Point(0, 1), new Point(1, 1))
+    let c2 = new CurveL(new Point(1, 1), new Point(1, 0))
+    let c3 = new CurveL(new Point(0, 0), new Point(1, 0))
+    let c4 = new CurveL(new Point(0, 0), new Point(0, 1))
+    let c5 = new CurveL(new Point(2, 0), new Point(3, 0))
+    let c6 = new CurveL(new Point(3, 1), new Point(3, 0))
+    let c7 = new CurveL(new Point(2, 0), new Point(2, 1))
+    let c8 = new CurveL(new Point(2, 1), new Point(3, 1))
+    let c9 = new CurveQ(new Point(84, 149), new Point(127, 52), new Point(98, 91))
+    let c10 = new CurveQ(new Point(136, 41), new Point(241, 0), new Point(176, 5))
+    let curves = [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10]
+
+    console.log(findLines(curves))
 }

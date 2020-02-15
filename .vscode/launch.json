@@ -5,15 +5,30 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Current TS File",
-            "type": "node",
+            "type": "chrome",
             "request": "launch",
-            "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
-            "args": [
-                "${relativeFile}"
-            ],
-            "cwd": "${workspaceRoot}",
-            "protocol": "inspector"
-        }
+            "name": "vuejs: chrome",
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}/src",
+            "breakOnLoad": true,
+            "sourceMapPathOverrides": {
+                "webpack:///./src/*": "${webRoot}/*"
+            }
+        },
+        // {
+        //     "name": "Current TS File",
+        //     "type": "node",
+        //     "request": "launch",
+        //     "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
+        //     "args": [
+        //         "${relativeFile}"
+        //     ],
+        //     "outFiles": [
+        //         "${workspaceRoot}/dist/**"
+        //     ],
+        //     "sourceMaps": true,
+        //     "cwd": "${workspaceRoot}",
+        //     "protocol": "inspector"
+        // }
     ]
 }

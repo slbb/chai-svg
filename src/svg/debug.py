@@ -10,7 +10,10 @@ def fileReader(name,writeFile):
                 else:
                     continue
             else:
-                writeFile.write(line)
+                if re.search('^export\s*',line):
+                    writeFile.write(re.sub('^export\s*','',line))
+                else:
+                    writeFile.write(line)
 
 with open(path+'debug.ts',mode='w',encoding='utf-8') as debugF:
     fileReader(path+'class.ts',debugF)

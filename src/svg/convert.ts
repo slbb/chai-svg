@@ -1,116 +1,60 @@
 import { Point, Curve, CurveL, CurveQ } from "./class"
 //start
 export function pathToCurveList(path: string): Array<Curve> {
-    function paramsStrToParamsList(paramsStr: string): Array<number> {
-        let paramsList: Array<number> = []
-        for (let i of paramsStr.trim().split(/[,\s]+|(?<=\d)(?=-)/)) {
-            paramsList.push(Number(i))
-        }
-        return paramsList
-    }
-    let headPoint: Point | null = null
-    let nowPoint: Point = new Point(0, 0)
-    let curveList: Array<Curve> = []
-    let first = path.trim().split(/(?<=\d)\s*(?=[A-Za-z])/)
-    for (let i of first) {
-        let paramsList: number[] = []
-        let split: string[] = i.split(/(?<=[A-Za-z])/)
-        let typeName: string = split[0]
-        let paramsStr: string = split[1]
+    let lastPoint: Point = new Point(0, 0)
+    let curves: Array<Curve> = []
+    let operatorStrs = path.trim().split(/(?<=\d|[Zz])\s*(?=[A-Za-z])/)
+    for (let operatorStr of operatorStrs) {
+        let params: number[] = []
+        let [typeName, paramsStr] = operatorStr.split(/(?<=[A-Za-z])/)
         if (paramsStr) {
-            paramsList = paramsStrToParamsList(paramsStr)
+            params = paramsStr.trim().split(/[,\s]+|(?<=\d)(?=-)/).map((value) => Number(value))
         }
-        let end: Point
-        switch (typeName.toLowerCase()) {
-            case 'm':
-                end = new Point(paramsList[0], paramsList[1])
-                if (typeName == 'm') {
-                    end.offset(nowPoint.x, nowPoint.y)
-                }
-                headPoint = end
-                nowPoint = end
-                break;
-            case 'l':
-                end = new Point(paramsList[0], paramsList[1])
-                if (typeName == 'l') {
-                    end.offset(nowPoint.x, nowPoint.y)
-                }
-                if (headPoint != null && end.isSamePosition(headPoint)) {
-                    end = headPoint
-                    headPoint = null
-                }
-                curveList.push(new CurveL(nowPoint, end))
-                nowPoint = end
-                break
-            case 'h':
-                end = new Point(paramsList[0], paramsList[1])
-                if (typeName == 'h') {
-                    end.offset(nowPoint.x, 0)
-                }
-                if (headPoint != null && end.isSamePosition(headPoint)) {
-                    end = headPoint
-                    headPoint = null
-                }
-                curveList.push(new CurveL(nowPoint, end))
-                nowPoint = end
-                break
-            case 'v':
-                end = new Point(nowPoint.x, paramsList[0])
-                if (typeName == 'v') {
-                    end.offset(0, nowPoint.y)
-                }
-                if (headPoint != null && end.isSamePosition(headPoint)) {
-                    end = headPoint
-                    headPoint = null
-                }
-                curveList.push(new CurveL(nowPoint, end))
-                nowPoint = end
-                break
-            case 'q':
-                end = new Point(paramsList[2], paramsList[3])
-                let control: Point = new Point(paramsList[0], paramsList[1])
-                if (typeName == 'q') {
-                    end.offset(nowPoint.x, nowPoint.y)
-                    control.offset(nowPoint.x, nowPoint.y)
-                }
-                if (headPoint != null && end.isSamePosition(headPoint)) {
-                    end = headPoint
-                    headPoint = null
-                }
-                curveList.push(new CurveQ(nowPoint, end, control))
-                nowPoint = end
-                break
-            case 't':
-                break
-            case 'c':
-                break
-            case 's':
-                break
-            case 'a':
-                break
-            case 'z':
-                if (headPoint != null) {
-                    if (!headPoint.isSamePosition(nowPoint)) {
-                        curveList.push(new CurveL(nowPoint, headPoint))
-                    }
-                    nowPoint = headPoint
-                }
-                break
-            default:
-                throw "not supported svg command found"
+        if (typeName.toUpperCase() == 'M') {
+            [lastPoint.x, lastPoint.y] = params
+            if (typeName == 'm') {
+                lastPoint.offset(params[0], params[1])
+            }
+        } else if (typeName.toUpperCase() == 'L') {
+            let end = new Point(params[0], params[1])
+            if (typeName == 'l') {
+                end.offset(lastPoint.x, lastPoint.y)
+            }
+            curves.push(new CurveL(lastPoint.clone(), end));
+            [lastPoint.x, lastPoint.y] = [end.x, end.y]
+        } else if(typeName.toUpperCase()== 'Q') {
+            let [control,end]=[new Point(params[0],params[1]),new Point(params[2],params[3])]
+            if (typeName == 'q') {
+                control.offset(lastPoint.x,lastPoint.y)
+                end.offset(lastPoint.x,lastPoint.y)
+            }
+            curves.push(new CurveQ(lastPoint.clone(),end,control));
+            [lastPoint.x, lastPoint.y] = [end.x, end.y]
         }
+        //H V T S C A Z暂时用不上，省略了
     }
-    return curveList
+    return curves
 }
 
-export function curveListToPath(curveList: Array<Curve>): string {
-    let path: string = ''
-    let lastEnd: Point = new Point(0, 0)
-    for (let curve of curveList) {
-        path += curve.toPathStringLinked(lastEnd)
-        lastEnd = curve.end
+export function useDupPoint(curves:Curve[]):void {
+    let points:Point[]=[]
+    function search(point:Point):Point|undefined{
+        for(let p of points){
+            if(p.isSamePosition(point)){
+                return p
+            }
+        }
+        points.push(point)
+        return undefined
     }
-    path = path.replace(/ -/g, '-')
-    path += 'Z'
-    return path
+    for(let c of curves){
+        let found=search(c.start)
+        if(found){
+            c.start=found
+        }
+        found=search(c.end)
+        if(found){
+            c.end=found
+        }
+    }
 }

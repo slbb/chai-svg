@@ -1,41 +1,88 @@
 //start
+/**
+ * 返回参数角的180度转角
+ * @param angle 参数角
+ */
+export function turn180(angle: number): number {
+    return angle > 0 ? angle - 180 : angle + 180
+}
+/**
+ * 返回从角a转动到角b的度数，逆时针为正，顺时针为负
+ * @param a 角a
+ * @param b 角b
+ */
+export function calcTurnAngle(a: number, b: number): number {
+    return Math.abs(b - a) > 180 ? turn180(b) - turn180(a) : b - a
+}
+/**
+ * 返回 [端点的切线朝外角度 , 以端点为头时Curve/Line的转角 ]
+ * @param head Curve/Line的端点，头或尾
+ * @param curveOrLine Curve/Line本身
+ */
+export function getAnglesByHead(head: { x: number, y: number }, curveOrLine: Curve|Line): number[] {
+    if (curveOrLine.getStart().isSamePosition(head)) {
+        return [curveOrLine.getStartDirection(), curveOrLine.getTurnAngle()]
+    } else if (curveOrLine.getEnd().isSamePosition(head)) {
+        return [curveOrLine.getEndDirection(), -curveOrLine.getTurnAngle()]
+    } else {
+        throw 'the parameter point given is not the head point of this curve/line'
+    }
+}
+
 export class Point {
     x: number
     y: number
+    static parsePoint(hashcode: string): { x: number, y: number } {
+        let [a, b] = hashcode.split(/,/)
+        return { x: Number(a), y: Number(b) }
+    }
     constructor(x: number, y: number) {
         this.x = x
         this.y = y
     }
-    offset(x: number, y: number) {
-        this.x += x
-        this.y += y
+    clone(): Point {
+        return new Point(this.x, this.y)
     }
-    isSamePosition(p: Point): boolean {
+    offset(x: number, y: number): Point {
+        this.x = this.x + x
+        this.y = this.y + y
+        return this
+    }
+    isSamePosition(p: { x: number, y: number }): boolean {
         return this.x == p.x && this.y == p.y
+    }
+    hashcode(): string {
+        return `${this.x},${this.y}`
     }
     toString(): string {
         return `(${this.x},${this.y})`
     }
-    transformMatrix(a: number, b: number, c: number, d: number, e: number, f: number) {
+    transformMatrix(a: number, b: number, c: number, d: number, e: number, f: number): Point {
         let x: number = this.x * a + this.y * c + e
         let y: number = this.x * b + this.y * d + f
-        this.x = x
-        this.y = y
+        return new Point(x, y)
     }
 }
 
 export abstract class Curve {
-    id: number
     start: Point
     end: Point
     constructor(start: Point, end: Point) {
-        this.id = 0
         this.start = start
         this.end = end
+    }
+    getStart():Point{
+        return this.start
+    }
+    getEnd():Point{
+        return this.end
     }
     abstract getIntersectPoint(p: Point): Point[]
     abstract getStartDirection(): number
     abstract getEndDirection(): number
+    getTurnAngle(): number {
+        return calcTurnAngle(turn180(this.getStartDirection()), this.getEndDirection())
+    }
     abstract reverse(): Curve
     abstract toString(): string
     abstract toPathString(): string
@@ -43,39 +90,40 @@ export abstract class Curve {
 }
 
 export class CurveL extends Curve {
-    a: number
-    b: number
-    c: number
     constructor(start: Point, end: Point) {
         super(start, end)
-        this.a = start.y - end.y
-        this.b = end.x - start.x
-        this.c = -this.a * start.x - this.b * start.y
     }
     toString() {
         return `L${this.start}${this.end}`
     }
+    getABC(): number[] {
+        let a: number = this.start.y - this.end.y
+        let b: number = this.end.x - this.start.x
+        let c: number = -a * this.start.x - b * this.start.y
+        return [a, b, c]
+    }
     getIntersectPoint(p: Point): Point[] {
+        let [a, b, c]: number[] = this.getABC()
         if (Math.min(this.start.y, this.end.y) <= p.y && p.y <= Math.max(this.start.y, this.end.y)) {
-            if (this.a * p.x + this.b * p.y + this.c == 0) {
+            if (a * p.x + b * p.y + c == 0) {
                 if (Math.min(this.start.x, this.end.x) <= p.x && p.x <= Math.max(this.start.x, this.end.x)) {
                     return [p]
                 } else {
                     return []
                 }
             } else {
-                if (this.a == 0 && p.y == this.start.y) {
+                if (a == 0 && p.y == this.start.y) {
                     return []
                 } else {
-                    let x: number = (-this.c - this.b * p.y) / this.a
+                    let x: number = (-c - b * p.y) / a
                     if (x >= p.x) {
                         return []
                     }
                     let y: number
-                    if (this.b == 0) {
+                    if (b == 0) {
                         y = p.y
                     } else {
-                        y = (this.c - this.a * p.x) / this.b
+                        y = (c - a * p.x) / b
                     }
                     return [new Point(x, y)]
                 }
@@ -85,13 +133,14 @@ export class CurveL extends Curve {
         }
     }
     getStartDirection(): number {
-        return Math.atan2(this.start.y - this.end.y, this.start.x - this.end.x)/Math.PI*180
+        return Math.atan2(this.start.y - this.end.y, this.start.x - this.end.x) / Math.PI * 180
     }
     getEndDirection(): number {
-        return Math.atan2(this.end.y - this.start.y, this.end.x - this.start.x)/Math.PI*180
+        return Math.atan2(this.end.y - this.start.y, this.end.x - this.start.x) / Math.PI * 180
     }
     reverse(): CurveL {
-        return new CurveL(this.end,this.start)
+        [this.start, this.end] = [this.end, this.start]
+        return this
     }
     toPathString(): string {
         return `M${this.start.x} ${this.start.y}L${this.end.x} ${this.end.y}`
@@ -233,13 +282,14 @@ export class CurveQ extends Curve {
         return (2 * Math.sqrt(a) * (2 * a * t * Math.sqrt(a * t * t + b * t + c) + b * (Math.sqrt(a * t * t + b * t + c) - Math.sqrt(c))) + (b * b - 4 * a * c) * (Math.log(b + 2 * Math.sqrt(a * c)) - Math.log(b + 2 * a * t + 2 * Math.sqrt(a) * Math.sqrt(a * t * t + b * t + c)))) / (8 * Math.pow(a, 3 / 2))
     }
     reverse(): CurveQ {
-        return new CurveQ(this.end,this.start,this.control)
+        [this.start, this.end] = [this.end, this.start]
+        return this
     }
     getStartDirection(): number {
-        return Math.atan2(this.start.y - this.control.y, this.start.x - this.control.x)/Math.PI*180
+        return Math.atan2(this.start.y - this.control.y, this.start.x - this.control.x) / Math.PI * 180
     }
     getEndDirection(): number {
-        return Math.atan2(this.end.y - this.control.y, this.end.x - this.control.x)/Math.PI*180
+        return Math.atan2(this.end.y - this.control.y, this.end.x - this.control.x) / Math.PI * 180
     }
     toPathString(): string {
         return `M${this.start.x} ${this.start.y}Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
@@ -264,11 +314,12 @@ export class ClosedCurve {
         }
     }
     getPointList(): Array<Point> {
-        let pl: Array<Point> = []
-        for (let i in this.curves) {
-            pl.push(this.curves[i].start)
+        let points: Set<Point> = new Set()
+        for (let c of this.curves) {
+            points.add(c.start)
+            points.add(c.end)
         }
-        return pl
+        return Array.from(points)
     }
     isPointInside(p: Point): boolean {
         let count: number = 0
@@ -297,6 +348,17 @@ export class ClosedCurve {
         }
         return true
     }
+    toPathString(): string {
+        let path: string = ''
+        let lastEnd: Point = new Point(0, 0)
+        for (let curve of this.curves) {
+            path += curve.toPathStringLinked(lastEnd)
+            lastEnd = curve.end
+        }
+        path = path.replace(/ -/g, '-')
+        path += 'Z'
+        return path
+    }
 }
 export class SeparatePart {
     outsideClosedCurve: ClosedCurve
@@ -305,16 +367,27 @@ export class SeparatePart {
         this.outsideClosedCurve = outsideClosedCurve
     }
     hasInside(): boolean {
-        return !(typeof (this.insideClosedCurves) == 'undefined' || this.insideClosedCurves.length == 0)
+        return this.insideClosedCurves.length > 0
+    }
+    getClosedCurves(): ClosedCurve[] {
+        return this.insideClosedCurves.concat(this.outsideClosedCurve)
     }
     getCurveList(): Curve[] {
         let curveList: Curve[] = this.outsideClosedCurve.curves
-        if (this.hasInside()) {
-            for (let closedCurve of this.insideClosedCurves) {
-                curveList.concat(closedCurve.curves)
-            }
+        for (let closedCurve of this.insideClosedCurves) {
+            curveList = curveList.concat(closedCurve.curves)
         }
         return curveList
+    }
+    toPathString(): string {
+        let path: string = ''
+        path += this.outsideClosedCurve.toPathString()
+        if (this.hasInside()) {
+            for (let cc of this.insideClosedCurves) {
+                path += cc.toPathString()
+            }
+        }
+        return path
     }
 }
 export class Line {
@@ -323,13 +396,16 @@ export class Line {
         this.curves = new Array()
         this.curves.push(curve)
     }
-    getCurves(): Curve[] {
-        return this.curves
+    getStart():Point{
+        return this.getStartCurve().start
+    }
+    getEnd():Point{
+        return this.getEndCurve().end
     }
     addCurveToEnd(curve: Curve): void {
         this.curves.push(curve)
     }
-    addCurveToHead(curve: Curve): void {
+    addCurveToStart(curve: Curve): void {
         let tmp: Curve[] = []
         tmp.push(curve)
         this.curves = tmp.concat(this.curves)
@@ -337,15 +413,25 @@ export class Line {
     getEndCurve(): Curve {
         return this.curves[this.curves.length - 1]
     }
-    getHeadCurve(): Curve {
+    getStartCurve(): Curve {
         return this.curves[0]
     }
-    setId(id: number): void {
-        for (let c of this.curves) {
-            c.id == id
-        }
+    getStartDirection():number{
+        return this.getStartCurve().getStartDirection()
     }
-    getId(): number {
-        return this.curves[0].id
+    getEndDirection():number{
+        return this.getEndCurve().getEndDirection()
+    }
+    getTurnAngle(): number {
+        return calcTurnAngle(turn180(this.getStartCurve().getStartDirection()), this.getEndCurve().getEndDirection())
+    }
+    toPathString(): string {
+        let path: string = ''
+        let lastEnd: Point = new Point(0, 0)
+        for (let c of this.curves) {
+            path += c.toPathStringLinked(lastEnd)
+            lastEnd = c.end
+        }
+        return path
     }
 }
