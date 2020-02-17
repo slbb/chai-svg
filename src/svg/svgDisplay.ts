@@ -7,7 +7,7 @@ export interface StrokeColorRef {
     [key: number]: string
 }
 
-interface SvgObject {
+export interface SvgObject {
     toPathString():string
     [key:string]:any
 }
@@ -33,7 +33,6 @@ export class SvgUtil {
         arr: SvgObject[],
         strokeColorRef: StrokeColorRef = { 0: "yellow", 1: "red", 2: "blue" }
     ): PathElement[] {
-        strokeColorRef
         let result: PathElement[] = []
         let length: number = Object.keys(strokeColorRef).length
         for (let i = 0; i < arr.length; i++) {

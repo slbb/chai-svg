@@ -1,8 +1,9 @@
 import { ClosedCurve, Curve, Point, SeparatePart, Line, turn180, getAnglesByHead, calcTurnAngle } from "./class";
+import { PathElement, SvgUtil, StrokeColorRef } from './svgDisplay';
 //start
 export function findClosedCurves(curves: Array<Curve>): Array<ClosedCurve> {
     let headPoint: Point | null = null
-    let result: Array<ClosedCurve> = []
+    const result: Array<ClosedCurve> = []
     let closedCurve: Array<Curve> = []
     for (let c of curves) {
         if (headPoint == null) {
@@ -23,7 +24,7 @@ export function findClosedCurves(curves: Array<Curve>): Array<ClosedCurve> {
 }
 export function generateSeparatePart(closedCurves: Array<ClosedCurve>): Array<SeparatePart> {
     let l: number = closedCurves.length
-    let fatherMarkList: Array<number | undefined> = new Array(l)
+    const fatherMarkList: Array<number | undefined> = new Array(l)
     fatherMarkList.fill(undefined)
     function findFather(i: number, j: number) {
         if (closedCurves[j].isClosedCurveInside(closedCurves[i])) {
@@ -59,7 +60,7 @@ export function generateSeparatePart(closedCurves: Array<ClosedCurve>): Array<Se
             return generation % 2 == 1 ? 0 : 1
         }
     )
-    let result: Array<SeparatePart> = []
+    const result: Array<SeparatePart> = []
     for (let i in fatherMarkList) {
         if (!generationList[i]) {
             let part: SeparatePart = new SeparatePart(closedCurves[i]);
@@ -75,11 +76,12 @@ export function generateSeparatePart(closedCurves: Array<ClosedCurve>): Array<Se
     return result
 }
 export function findLines(curves: Curve[]): Line[] {
-    let result: Line[] = []
+    const result: Line[] = []
     const point_curveMap = new Map<string, Curve[]>()
     function initMap(p: Point, c: Curve): void {
-        if (point_curveMap.has(p.hashcode())) {
-            point_curveMap.get(p.hashcode())?.push(c)
+        let curves = point_curveMap.get(p.hashcode())
+        if (curves) {
+            curves.push(c)
         } else {
             point_curveMap.set(p.hashcode(), [c])
         }
@@ -88,7 +90,7 @@ export function findLines(curves: Curve[]): Line[] {
         initMap(c.start, c)
         initMap(c.end, c)
     }
-    let unhandledMarks: boolean[] = new Array(curves.length)
+    const unhandledMarks: boolean[] = new Array(curves.length)
     unhandledMarks.fill(true)
     function calcDistance(p1: { x: number, y: number }, p2: { x: number, y: number }): number {
         return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2))
@@ -102,6 +104,9 @@ export function findLines(curves: Curve[]): Line[] {
             //head
             function search(backward: boolean): void {
                 let lHead = backward ? line.getStart() : line.getEnd()
+                //line端点切线角度，line自身的总转角
+                let [lHead_D, l_turn] = getAnglesByHead(lHead, line)
+                l_turn=-l_turn
                 //遍历map的key（点坐标）
                 for (let cHead_hc of point_curveMap.keys()) {
                     let cHead = Point.parsePoint(cHead_hc)
@@ -113,21 +118,19 @@ export function findLines(curves: Curve[]): Line[] {
                             //遍历取出的curves，计算角度数据是否符合条件
                             for (let c of cHead_curves) {
                                 if (unhandledMarks[curves.indexOf(c)]) {
-                                    //line端点切线角度，line自身的总转角
-                                    let [lHead_D, l_turn] = getAnglesByHead(lHead, line)
                                     //curve端点切线角度，curve自身的总转角
                                     let [cHead_D, c_turn] = getAnglesByHead(cHead, c)
                                     //从 line端点切线角度 转向 curve端点切线角度，求出转角
-                                    let lHead_cHead_turn: number = calcTurnAngle(lHead_D, cHead_D)
+                                    let lHead_cHead_turn: number = calcTurnAngle(lHead_D, turn180(cHead_D))
                                     //首先排除line和curve总转角之和太大的，以及端点处切线角度差距太大的
-                                    if (l_turn + c_turn < 90 && lHead_cHead_turn > 20) {
+                                    if (Math.abs(l_turn + c_turn) < 45 && Math.abs(lHead_cHead_turn) < 20) {
                                         //line端点和curve端点的距离
                                         let lHead_cHead_distance: number = calcDistance(cHead, lHead)
                                         //line和curve端点连线的成角
-                                        let lcHead_angle: number = Math.atan2(cHead.y - lHead.y, cHead.x - lHead.x) / Math.PI * 180
+                                        let lcLink_angle: number = Math.atan2(cHead.y - lHead.y, cHead.x - lHead.x) / Math.PI * 180
                                         //line和端点连线的成角之间的转角
-                                        let lHead_lcHead_turn: number = calcTurnAngle(lHead_D, lcHead_angle)
-                                        let isValidFlag: boolean = lHead_cHead_distance == 0 || (lHead_cHead_turn * lHead_lcHead_turn >= 0 && Math.abs(lHead_lcHead_turn) <= Math.abs(lHead_cHead_turn))
+                                        let lHead_lcLink_turn: number = calcTurnAngle(lHead_D, lcLink_angle)
+                                        let isValidFlag: boolean = lHead_cHead_distance == 0 || Math.abs(lHead_lcLink_turn)<15
                                         if (isValidFlag) {
                                             if (validCurve) {
                                                 validCurve = validCurve.min_turn > lHead_cHead_turn ? { curve: c, min_turn: lHead_cHead_turn } : validCurve
