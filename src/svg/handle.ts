@@ -1,5 +1,17 @@
-import { ClosedCurve, Curve, Point, SeparatePart, Line, turn180, getAnglesByHead, calcTurnAngle } from "./class";
-import { PathElement, SvgUtil, StrokeColorRef } from './svgDisplay';
+import {
+    ClosedCurve,
+    Curve,
+    Point,
+    SeparatePart,
+    Line,
+    turn180,
+    getAnglesByHead,
+    calcTurnAngle,
+    Route,
+    calcDistance,
+    calcKAngle
+} from './class'
+import { PathElement, SvgUtil, StrokeColorRef } from './svgDisplay'
 //start
 export function findClosedCurves(curves: Array<Curve>): Array<ClosedCurve> {
     let headPoint: Point | null = null
@@ -22,7 +34,9 @@ export function findClosedCurves(curves: Array<Curve>): Array<ClosedCurve> {
     }
     return result
 }
-export function generateSeparatePart(closedCurves: Array<ClosedCurve>): Array<SeparatePart> {
+export function generateSeparatePart(
+    closedCurves: Array<ClosedCurve>
+): Array<SeparatePart> {
     let l: number = closedCurves.length
     const fatherMarkList: Array<number | undefined> = new Array(l)
     fatherMarkList.fill(undefined)
@@ -46,7 +60,11 @@ export function generateSeparatePart(closedCurves: Array<ClosedCurve>): Array<Se
         }
     }
     let generationList: number[] = fatherMarkList.map(
-        (value: number | undefined, _index: number | undefined, array: Array<number | undefined>): number => {
+        (
+            value: number | undefined,
+            _index: number | undefined,
+            array: Array<number | undefined>
+        ): number => {
             let generation: number = 1
             function getGeneration(v: number | undefined) {
                 if (typeof v == 'undefined') {
@@ -63,7 +81,7 @@ export function generateSeparatePart(closedCurves: Array<ClosedCurve>): Array<Se
     const result: Array<SeparatePart> = []
     for (let i in fatherMarkList) {
         if (!generationList[i]) {
-            let part: SeparatePart = new SeparatePart(closedCurves[i]);
+            let part: SeparatePart = new SeparatePart(closedCurves[i])
             for (let j in fatherMarkList) {
                 if (fatherMarkList[j] == Number(i)) {
                     part.insideClosedCurves.push(closedCurves[j])
@@ -92,9 +110,6 @@ export function findLines(curves: Curve[]): Line[] {
     }
     const unhandledMarks: boolean[] = new Array(curves.length)
     unhandledMarks.fill(true)
-    function calcDistance(p1: { x: number, y: number }, p2: { x: number, y: number }): number {
-        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2))
-    }
     for (let i = 0; i < curves.length; i++) {
         if (unhandledMarks[i]) {
             let line: Line = new Line(curves[i])
@@ -106,64 +121,97 @@ export function findLines(curves: Curve[]): Line[] {
                 let lHead = backward ? line.getStart() : line.getEnd()
                 //line端点切线角度，line自身的总转角
                 let [lHead_D, l_turn] = getAnglesByHead(lHead, line)
-                l_turn=-l_turn
+                l_turn = -l_turn
                 //遍历map的key（点坐标）
                 for (let cHead_hc of point_curveMap.keys()) {
                     let cHead = Point.parsePoint(cHead_hc)
                     //找到符合range的坐标，取出map的value（curves），进行下一步
-                    if (cHead.x < lHead.x + range && cHead.x > lHead.x - range && cHead.y < lHead.y + range && cHead.y > lHead.y - range) {
-                        let validCurve: { curve: Curve, min_turn: number } | null = null
+                    if (
+                        cHead.x < lHead.x + range &&
+                        cHead.x > lHead.x - range &&
+                        cHead.y < lHead.y + range &&
+                        cHead.y > lHead.y - range
+                    ) {
+                        let validCurve: { curve: Curve; min_turn: number } | null = null
                         let cHead_curves = point_curveMap.get(cHead_hc)
                         if (cHead_curves) {
                             //遍历取出的curves，计算角度数据是否符合条件
                             for (let c of cHead_curves) {
                                 if (unhandledMarks[curves.indexOf(c)]) {
-                                    //curve端点切线角度，curve自身的总转角
-                                    let [cHead_D, c_turn] = getAnglesByHead(cHead, c)
-                                    //从 line端点切线角度 转向 curve端点切线角度，求出转角
-                                    let lHead_cHead_turn: number = calcTurnAngle(lHead_D, turn180(cHead_D))
-                                    //首先排除line和curve总转角之和太大的，以及端点处切线角度差距太大的
-                                    if (Math.abs(l_turn + c_turn) < 45 && Math.abs(lHead_cHead_turn) < 20) {
-                                        //line端点和curve端点的距离
-                                        let lHead_cHead_distance: number = calcDistance(cHead, lHead)
-                                        //line和curve端点连线的成角
-                                        let lcLink_angle: number = Math.atan2(cHead.y - lHead.y, cHead.x - lHead.x) / Math.PI * 180
-                                        //line和端点连线的成角之间的转角
-                                        let lHead_lcLink_turn: number = calcTurnAngle(lHead_D, lcLink_angle)
-                                        let isValidFlag: boolean = lHead_cHead_distance == 0 || Math.abs(lHead_lcLink_turn)<15
-                                        if (isValidFlag) {
-                                            if (validCurve) {
-                                                validCurve = validCurve.min_turn > lHead_cHead_turn ? { curve: c, min_turn: lHead_cHead_turn } : validCurve
-                                            } else {
-                                                validCurve = { curve: c, min_turn: lHead_cHead_turn }
+                                    if (
+                                        calcDistance(lHead, cHead) <
+                                        calcDistance(
+                                            lHead.isSamePosition(line.getStart())
+                                                ? line.getEnd()
+                                                : lHead,
+                                            c.start.isSamePosition(cHead) ? c.end : cHead
+                                        )
+                                    ) {
+                                        //curve端点切线角度，curve自身的总转角
+                                        let [cHead_D, c_turn] = getAnglesByHead(cHead, c)
+                                        //从 line端点切线角度 转向 curve端点切线角度，求出转角
+                                        let lHead_cHead_turn: number = calcTurnAngle(
+                                            lHead_D,
+                                            turn180(cHead_D)
+                                        )
+                                        //首先排除line和curve总转角之和太大的，以及端点处切线角度差距太大的
+                                        if (
+                                            Math.abs(l_turn + c_turn) < 85 &&
+                                            Math.abs(lHead_cHead_turn) < 20
+                                        ) {
+                                            //line和curve端点连线的成角
+                                            let lcLink_angle: number =
+                                                (Math.atan2(cHead.y - lHead.y, cHead.x - lHead.x) /
+                                                    Math.PI) *
+                                                180
+                                            //line和端点连线的成角之间的转角
+                                            let lHead_lcLink_turn_abs: number = Math.abs(
+                                                calcTurnAngle(lHead_D, lcLink_angle)
+                                            )
+                                            let lcLink_cHead_turn_abs: number = Math.abs(
+                                                calcTurnAngle(lcLink_angle, turn180(cHead_D))
+                                            )
+                                            let isValidFlag: boolean =
+                                                lHead.isSamePosition(cHead) ||
+                                                Math.min(lHead_lcLink_turn_abs, lcLink_cHead_turn_abs) <
+                                                15
+                                            if (isValidFlag) {
+                                                if (validCurve) {
+                                                    validCurve =
+                                                        validCurve.min_turn > lHead_cHead_turn
+                                                            ? { curve: c, min_turn: lHead_cHead_turn }
+                                                            : validCurve
+                                                } else {
+                                                    validCurve = { curve: c, min_turn: lHead_cHead_turn }
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                        if (validCurve) {
-                            if (backward) {
-                                if (validCurve.curve.start.isSamePosition(cHead)) {
-                                    line.addCurveToStart(validCurve.curve.reverse())
-                                } else if (validCurve.curve.end.isSamePosition(cHead)) {
-                                    line.addCurveToStart(validCurve.curve)
+                            if (validCurve) {
+                                if (backward) {
+                                    if (validCurve.curve.start.isSamePosition(cHead)) {
+                                        line.addCurveToStart(validCurve.curve.reverse())
+                                    } else if (validCurve.curve.end.isSamePosition(cHead)) {
+                                        line.addCurveToStart(validCurve.curve)
+                                    } else {
+                                        throw 'bug occurs in search()'
+                                    }
                                 } else {
-                                    throw 'bug occurs in search()'
+                                    if (validCurve.curve.start.isSamePosition(cHead)) {
+                                        line.addCurveToEnd(validCurve.curve)
+                                    } else if (validCurve.curve.end.isSamePosition(cHead)) {
+                                        line.addCurveToEnd(validCurve.curve.reverse())
+                                    } else {
+                                        throw 'bug occurs in search()'
+                                    }
                                 }
-                            } else {
-                                if (validCurve.curve.start.isSamePosition(cHead)) {
-                                    line.addCurveToEnd(validCurve.curve)
-                                } else if (validCurve.curve.end.isSamePosition(cHead)) {
-                                    line.addCurveToEnd(validCurve.curve.reverse())
-                                } else {
-                                    throw 'bug occurs in search()'
-                                }
+                                unhandledMarks[curves.indexOf(validCurve.curve)] = false
+                                //找到的话就递归查找，直到找不到为止
+                                search(backward)
+                                return
                             }
-                            unhandledMarks[curves.indexOf(validCurve.curve)] = false
-                            //找到的话就递归查找，直到找不到为止
-                            search(backward)
-                            return
                         }
                     }
                 }
@@ -171,6 +219,26 @@ export function findLines(curves: Curve[]): Line[] {
             }
             search(true)
             search(false)
+        }
+    }
+    return result
+}
+
+function findRoutes(lines: Line[]): Route[] {
+    const result: Route[] = []
+    lines.sort((a, b) => {
+        return (
+            calcDistance(b.getStart(), b.getEnd()) -
+            calcDistance(a.getStart(), a.getEnd())
+        )
+    })
+    for (let i = 0; i < lines.length; i++) {
+        let line1 = lines[i]
+        let kA1 = calcKAngle(line1.getStart(), line1.getEnd())
+        for (let j = i + 1; j < lines.length; j++) {
+            let line2 = lines[j]
+            let kA2 = calcKAngle(line2.getStart(), line2.getEnd())
+            //TODO: 找成对的Line，注意，一些Line错误整合了，要找出并断开。
         }
     }
     return result

@@ -13,7 +13,8 @@
             "breakOnLoad": true,
             "sourceMapPathOverrides": {
                 "webpack:///./src/*": "${webRoot}/*"
-            }
+            },
+            "runtimeExecutable": "c:/Users/77777/AppData/Local/360Chrome/Chrome/Application/360chrome.exe"
         },
         // {
         //     "name": "Current TS File",

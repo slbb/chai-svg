@@ -1,4 +1,11 @@
 //start
+export function calcDistance(p1: { x: number, y: number }, p2: { x: number, y: number }): number {
+    return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2))
+}
+export function calcKAngle(p1: { x: number, y: number }, p2: { x: number, y: number }): number {
+    let angle = Math.atan2(p2.y-p1.y,p2.x-p1.x)
+    return angle<0?turn180(angle):angle
+}
 /**
  * 返回参数角的180度转角
  * @param angle 参数角
@@ -19,7 +26,7 @@ export function calcTurnAngle(a: number, b: number): number {
  * @param head Curve/Line的端点，头或尾
  * @param curveOrLine Curve/Line本身
  */
-export function getAnglesByHead(head: { x: number, y: number }, curveOrLine: Curve|Line): number[] {
+export function getAnglesByHead(head: { x: number, y: number }, curveOrLine: Curve | Line): number[] {
     if (curveOrLine.getStart().isSamePosition(head)) {
         return [curveOrLine.getStartDirection(), curveOrLine.getTurnAngle()]
     } else if (curveOrLine.getEnd().isSamePosition(head)) {
@@ -71,10 +78,10 @@ export abstract class Curve {
         this.start = start
         this.end = end
     }
-    getStart():Point{
+    getStart(): Point {
         return this.start
     }
-    getEnd():Point{
+    getEnd(): Point {
         return this.end
     }
     abstract getIntersectPoint(p: Point): Point[]
@@ -396,10 +403,10 @@ export class Line {
         this.curves = new Array()
         this.curves.push(curve)
     }
-    getStart():Point{
+    getStart(): Point {
         return this.getStartCurve().start
     }
-    getEnd():Point{
+    getEnd(): Point {
         return this.getEndCurve().end
     }
     addCurveToEnd(curve: Curve): void {
@@ -416,10 +423,10 @@ export class Line {
     getStartCurve(): Curve {
         return this.curves[0]
     }
-    getStartDirection():number{
+    getStartDirection(): number {
         return this.getStartCurve().getStartDirection()
     }
-    getEndDirection():number{
+    getEndDirection(): number {
         return this.getEndCurve().getEndDirection()
     }
     getTurnAngle(): number {
@@ -433,5 +440,11 @@ export class Line {
             lastEnd = c.end
         }
         return path
+    }
+}
+export class Route {
+    lines: Line[]
+    constructor(lines: Line[]) {
+        this.lines = lines
     }
 }
