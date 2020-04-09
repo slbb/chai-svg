@@ -28,7 +28,7 @@ function getAnglesByHead(head: { x: number, y: number }, curveOrLine: Curve|Line
     }
 }
 
-class Point {
+class T {
     x: number
     y: number
     static parsePoint(hashcode: string): { x: number, y: number } {
@@ -39,10 +39,10 @@ class Point {
         this.x = x
         this.y = y
     }
-    clone(): Point {
-        return new Point(this.x, this.y)
+    clone(): T {
+        return new T(this.x, this.y)
     }
-    offset(x: number, y: number): Point {
+    offset(x: number, y: number): T {
         this.x = this.x + x
         this.y = this.y + y
         return this
@@ -56,27 +56,27 @@ class Point {
     toString(): string {
         return `(${this.x},${this.y})`
     }
-    transformMatrix(a: number, b: number, c: number, d: number, e: number, f: number): Point {
+    transformMatrix(a: number, b: number, c: number, d: number, e: number, f: number): T {
         let x: number = this.x * a + this.y * c + e
         let y: number = this.x * b + this.y * d + f
-        return new Point(x, y)
+        return new T(x, y)
     }
 }
 
 abstract class Curve {
-    start: Point
-    end: Point
-    constructor(start: Point, end: Point) {
+    start: T
+    end: T
+    constructor(start: T, end: T) {
         this.start = start
         this.end = end
     }
-    getStart():Point{
+    getStart():T{
         return this.start
     }
-    getEnd():Point{
+    getEnd():T{
         return this.end
     }
-    abstract getIntersectPoint(p: Point): Point[]
+    abstract getIntersectPoint(p: T): T[]
     abstract getStartDirection(): number
     abstract getEndDirection(): number
     getTurnAngle(): number {
@@ -85,11 +85,11 @@ abstract class Curve {
     abstract reverse(): Curve
     abstract toString(): string
     abstract toPathString(): string
-    abstract toPathStringLinked(lastEnd: Point): string
+    abstract toPathStringLinked(lastEnd: T): string
 }
 
 class CurveL extends Curve {
-    constructor(start: Point, end: Point) {
+    constructor(start: T, end: T) {
         super(start, end)
     }
     toString() {
@@ -101,7 +101,7 @@ class CurveL extends Curve {
         let c: number = -a * this.start.x - b * this.start.y
         return [a, b, c]
     }
-    getIntersectPoint(p: Point): Point[] {
+    getIntersectPoint(p: T): T[] {
         let [a, b, c]: number[] = this.getABC()
         if (Math.min(this.start.y, this.end.y) <= p.y && p.y <= Math.max(this.start.y, this.end.y)) {
             if (a * p.x + b * p.y + c == 0) {
@@ -124,7 +124,7 @@ class CurveL extends Curve {
                     } else {
                         y = (c - a * p.x) / b
                     }
-                    return [new Point(x, y)]
+                    return [new T(x, y)]
                 }
             }
         } else {
@@ -144,7 +144,7 @@ class CurveL extends Curve {
     toPathString(): string {
         return `M${this.start.x} ${this.start.y}L${this.end.x} ${this.end.y}`
     }
-    toPathStringLinked(lastEnd: Point): string {
+    toPathStringLinked(lastEnd: T): string {
         let s: string = `L${this.end.x} ${this.end.y}`
         if (lastEnd.isSamePosition(this.start)) {
             return s
@@ -155,24 +155,24 @@ class CurveL extends Curve {
 }
 class CurveQ extends Curve {
     //B(t)=(1-t)^2 start + 2t(1-t) control + t^2 end, t in [0,1]
-    control: Point
-    constructor(start: Point, end: Point, control: Point) {
+    control: T
+    constructor(start: T, end: T, control: T) {
         super(start, end)
         this.control = control
     }
     toString() {
         return `Q${this.start}${this.control}${this.end}`
     }
-    getPointByT(t: number): Point {
+    getPointByT(t: number): T {
         if (0 <= t && t <= 1) {
             let x: number = Math.pow((1 - t), 2) * this.start.x + 2 * t * (1 - t) * this.control.x + Math.pow(t, 2) * this.end.x
             let y: number = Math.pow((1 - t), 2) * this.start.y + 2 * t * (1 - t) * this.control.y + Math.pow(t, 2) * this.end.y
-            return new Point(x, y)
+            return new T(x, y)
         } else {
             throw "not valid t value";
         }
     }
-    getIntersectPoint(p: Point): Point[] {
+    getIntersectPoint(p: T): T[] {
         /* 根据二次贝塞尔曲线公式，得到曲线上的点P(x,y)满足(t in [0,1]):
          * y=(start.y-2*control.y+end.y)*t^2 + 2*(control.y-start.y)*t + start.y
          *             ay                              by
@@ -185,7 +185,7 @@ class CurveQ extends Curve {
         let ay: number = this.start.y - 2 * this.control.y + this.end.y
         let by: number = 2 * (this.control.y - this.start.y)
         let mty: number = -by / (2 * ay)
-        function getIntersectPointMain(self: CurveQ): Point[] {
+        function getIntersectPointMain(self: CurveQ): T[] {
             let cy: number = self.start.y - p.y
             if (ay == 0) {
                 //ay==0时，y的方程式是一次方程，用一次方程解法
@@ -209,7 +209,7 @@ class CurveQ extends Curve {
                 }
                 let t: number = -cy / by
                 if (0 <= t && t <= 1) {
-                    let point: Point = self.getPointByT(t)
+                    let point: T = self.getPointByT(t)
                     if (point.x <= p.x) {
                         return [point]
                     } else {
@@ -220,7 +220,7 @@ class CurveQ extends Curve {
                 }
             } else {
                 // ay!=0时，用二次方程解法
-                let result: Point[] = []
+                let result: T[] = []
                 let delta: number = Math.pow(by, 2) - 4 * ay * cy
                 if (delta >= 0) {
                     let t1: number = (-by + Math.sqrt(delta)) / (2 * ay)
@@ -293,7 +293,7 @@ class CurveQ extends Curve {
     toPathString(): string {
         return `M${this.start.x} ${this.start.y}Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
     }
-    toPathStringLinked(p: Point): string {
+    toPathStringLinked(p: T): string {
         let s: string = `Q${this.control.x} ${this.control.y} ${this.end.x} ${this.end.y}`
         if (p.isSamePosition(this.start)) {
             return s
@@ -312,22 +312,22 @@ class ClosedCurve {
             this.curves = curves
         }
     }
-    getPointList(): Array<Point> {
-        let points: Set<Point> = new Set()
+    getPointList(): Array<T> {
+        let points: Set<T> = new Set()
         for (let c of this.curves) {
             points.add(c.start)
             points.add(c.end)
         }
         return Array.from(points)
     }
-    isPointInside(p: Point): boolean {
+    isPointInside(p: T): boolean {
         let count: number = 0
         for (let c of this.curves) {
-            let points: Point[] = c.getIntersectPoint(p)
+            let points: T[] = c.getIntersectPoint(p)
             if (points.some(point => point.isSamePosition(p))) {
                 return true
             } else {
-                points.forEach((value: Point, index: number, array: Point[]) => {
+                points.forEach((value: T, index: number, array: T[]) => {
                     for (let i: number = 0; i < index; i++) {
                         if (array[i].isSamePosition(value)) {
                             return
@@ -349,7 +349,7 @@ class ClosedCurve {
     }
     toPathString(): string {
         let path: string = ''
-        let lastEnd: Point = new Point(0, 0)
+        let lastEnd: T = new T(0, 0)
         for (let curve of this.curves) {
             path += curve.toPathStringLinked(lastEnd)
             lastEnd = curve.end
@@ -395,10 +395,10 @@ class Line {
         this.curves = new Array()
         this.curves.push(curve)
     }
-    getStart():Point{
+    getStart():T{
         return this.getStartCurve().start
     }
-    getEnd():Point{
+    getEnd():T{
         return this.getEndCurve().end
     }
     addCurveToEnd(curve: Curve): void {
@@ -426,7 +426,7 @@ class Line {
     }
     toPathString(): string {
         let path: string = ''
-        let lastEnd: Point = new Point(0, 0)
+        let lastEnd: T = new T(0, 0)
         for (let c of this.curves) {
             path += c.toPathStringLinked(lastEnd)
             lastEnd = c.end
@@ -435,7 +435,7 @@ class Line {
     }
 }
 function pathToCurveList(path: string): Array<Curve> {
-    let lastPoint: Point = new Point(0, 0)
+    let lastPoint: T = new T(0, 0)
     let curves: Array<Curve> = []
     let operatorStrs = path.trim().split(/(?<=\d|[Zz])\s*(?=[A-Za-z])/)
     for (let operatorStr of operatorStrs) {
@@ -450,14 +450,14 @@ function pathToCurveList(path: string): Array<Curve> {
                 lastPoint.offset(params[0], params[1])
             }
         } else if (typeName.toUpperCase() == 'L') {
-            let end = new Point(params[0], params[1])
+            let end = new T(params[0], params[1])
             if (typeName == 'l') {
                 end.offset(lastPoint.x, lastPoint.y)
             }
             curves.push(new CurveL(lastPoint.clone(), end));
             [lastPoint.x, lastPoint.y] = [end.x, end.y]
         } else if(typeName.toUpperCase()== 'Q') {
-            let [control,end]=[new Point(params[0],params[1]),new Point(params[2],params[3])]
+            let [control,end]=[new T(params[0],params[1]),new T(params[2],params[3])]
             if (typeName == 'q') {
                 control.offset(lastPoint.x,lastPoint.y)
                 end.offset(lastPoint.x,lastPoint.y)
@@ -471,8 +471,8 @@ function pathToCurveList(path: string): Array<Curve> {
 }
 
 function useDupPoint(curves:Curve[]):void {
-    let points:Point[]=[]
-    function search(point:Point):Point|undefined{
+    let points:T[]=[]
+    function search(point:T):T|undefined{
         for(let p of points){
             if(p.isSamePosition(point)){
                 return p
@@ -492,7 +492,7 @@ function useDupPoint(curves:Curve[]):void {
         }
     }
 }function findClosedCurves(curves: Array<Curve>): Array<ClosedCurve> {
-    let headPoint: Point | null = null
+    let headPoint: T | null = null
     let result: Array<ClosedCurve> = []
     let closedCurve: Array<Curve> = []
     for (let c of curves) {
@@ -568,7 +568,7 @@ function generateSeparatePart(closedCurves: Array<ClosedCurve>): Array<SeparateP
 function findLines(curves: Curve[]): Line[] {
     let result: Line[] = []
     const point_curveMap = new Map<string, Curve[]>()
-    function initMap(p: Point, c: Curve): void {
+    function initMap(p: T, c: Curve): void {
         if (point_curveMap.has(p.hashcode())) {
             point_curveMap.get(p.hashcode())?.push(c)
         } else {
@@ -595,7 +595,7 @@ function findLines(curves: Curve[]): Line[] {
                 let lHead = backward ? line.getStart() : line.getEnd()
                 //遍历map的key（点坐标）
                 for (let cHead_hc of point_curveMap.keys()) {
-                    let cHead = Point.parsePoint(cHead_hc)
+                    let cHead = T.parsePoint(cHead_hc)
                     //找到符合range的坐标，取出map的value（curves），进行下一步
                     if (cHead.x < lHead.x + range && cHead.x > lHead.x - range && cHead.y < lHead.y + range && cHead.y > lHead.y - range) {
                         let validCurve: { curve: Curve, min_turn: number } | null = null

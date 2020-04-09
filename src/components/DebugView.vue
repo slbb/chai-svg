@@ -31,7 +31,7 @@ for (let entries of Object.entries(data)) {
   }
 })
 export default class DebugView extends Vue {
-  char = "劙";
+  char = "龍";
   strokeColorRef = {
     0: "yellow",
     1: "red",
@@ -51,7 +51,7 @@ export default class DebugView extends Vue {
     );
     let ne: PathElement[] = [];
     for (let sp of sps) {
-      let lines = findLines(sp.getCurveList());
+      let lines = findLines(sp);
       ne = ne.concat(
         SvgUtil.array2pathElementsColored(lines, this.strokeColorRef)
       );

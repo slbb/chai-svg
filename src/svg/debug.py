@@ -17,5 +17,6 @@ def fileReader(name,writeFile):
 
 with open(path+'debug.ts',mode='w',encoding='utf-8') as debugF:
     fileReader(path+'class.ts',debugF)
+    fileReader(path+'utils.ts',debugF)
     fileReader(path+'convert.ts',debugF)
     fileReader(path+'handle.ts',debugF)
