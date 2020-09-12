@@ -16,20 +16,20 @@
             },
             "runtimeExecutable": "c:/Users/77777/AppData/Local/360Chrome/Chrome/Application/360chrome.exe"
         },
-        // {
-        //     "name": "Current TS File",
-        //     "type": "node",
-        //     "request": "launch",
-        //     "program": "${workspaceRoot}/node_modules/ts-node/dist/bin.js",
-        //     "args": [
-        //         "${relativeFile}"
-        //     ],
-        //     "outFiles": [
-        //         "${workspaceRoot}/dist/**"
-        //     ],
-        //     "sourceMaps": true,
-        //     "cwd": "${workspaceRoot}",
-        //     "protocol": "inspector"
-        // }
+        {
+            "name": "Current TS File",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/node_modules/ts-node/dist/bin.js",
+            "args": [
+                "${relativeFile}"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/dist/**"
+            ],
+            "sourceMaps": true,
+            "cwd": "${workspaceFolder}",
+            "protocol": "inspector"
+        }
     ]
 }
