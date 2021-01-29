@@ -1,12 +1,19 @@
-本项目皆在简化天珩字体svg，提取汉字骨架，数据用于[汉字自动拆分项目](https://github.com/lanluoxiao/Chai)。
-##### 简明流程说明：
-1. 把svg path数据转换为Curve（线条对象），一个字符由多个Curve组成
-2. 把字符分割为一个个相离部件
-   1. 找出所有的ClosedCurve（闭合线条组）（字符的svg图形总是由n个ClosedCurve组成的，不存在不闭合的游离线条）
-   2. 确定ClosedCurve相互之间的包含关系。根据包含关系得出哪些ClosedCurve组成字符的一个相离部件。比如“口”字，就由“外框”和“内框”两个ClosedCurve组成。
-3. 针对每个SeparatePart（相离部件）进行简化合并，导出骨架（骨架的每个线条对应汉字的每一个笔划）。
-   ///以下为待定方案
-   1. 确定线条之间的连续关系，连续的线条合并为一条Line（连续线条）。例：假设存在多条处于同一水平线上的线条，都属于一条Line，无论线条之间是接合还是中间有断开。（**当前进度**
-   2. 相近且相似的两条Line合并为一个Route（通路）。例：比如“一”字，通过上一步骤，可以找到上下两条接近水平直线的Line，这两条Line就合并为一个Route，组成笔划“横”的上界与下界。而“十”字，则能找到笔划“横”的上下界组成的一个Route，和笔划“竖”的左右界组成的一个Route。可见，每个Route近似对应一个单纯笔划。至此，还剩下一些零散的、不属于任何Route的Curve。这些Curve都是两个Route之间的接合部分以及和装饰字体笔形用的。
-   3. 对余下的不属于Route的Curve进行处理。在余下的Curve当中，存在接合关系的Curve分为一组。分别对每一组Curve进行处理。如果一组Curve只与一个Route有接合关系，则简化并且合并到该Route当中；如果一组Curve与两个Route有接合关系，则简化，并且按形态分别合并到该两个Route当中。至此，所有的Curve都已经合并到Route当中了。
-   4. 简化Route，把每一个Route简化为一个骨架线条。调整线条之间的接合关系，简化完成。
+# chaisvg
+
+## Project setup
+```
+npm install
+```
+
+### Compiles and hot-reloads for development
+```
+npm run serve
+```
+
+### Compiles and minifies for production
+```
+npm run build
+```
+
+### Customize configuration
+See [Configuration Reference](https://cli.vuejs.org/config/).

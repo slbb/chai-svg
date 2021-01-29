@@ -30,7 +30,7 @@ files=[
     path+'struct/CurveQ.ts',
     path+'struct/Link.ts',
     path+'struct/Point.ts',
-    path+'struct/SeparatePart.ts'
+    path+'struct/SeparatePart.ts',
     path+'utils/utils.ts'
 ]
 with open(path+'test/debug.ts',mode='w',encoding='utf-8') as debugF:
