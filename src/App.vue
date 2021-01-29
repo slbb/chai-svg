@@ -6,15 +6,15 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator';
-import DebugPanel from "./components/DebugPanel.vue";
+import { defineComponent } from 'vue';
+import DebugPanel from './components/DebugPanel.vue';
 
-@Component({
+export default defineComponent({
+  name: 'App',
   components: {
-    DebugPanel,
-  },
-})
-export default class App extends Vue {}
+    DebugPanel
+  }
+});
 </script>
 
 <style>
@@ -24,6 +24,6 @@ export default class App extends Vue {}
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  /* margin-top: 60px; */
+  margin-top: 60px;
 }
 </style>
